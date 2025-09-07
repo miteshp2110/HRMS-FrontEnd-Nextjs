@@ -28,7 +28,10 @@ export interface LeaveRecord{
   primary_status: Boolean | null,
   secondry_status: Boolean | null,
   primary_approver_name: string | null,
-  secondary_approver_name: string | null
+  secondary_approver_name: string | null,
+  employee_id: number,
+  employee_name:string,
+  primary_user : number
 
 }
 export interface AttendanceRecord {
@@ -941,8 +944,8 @@ export async function deleteLeaveRequest(recordId: number): Promise<void> {
   })
 }
 
-export async function getPrimaryLeaveApprovals(): Promise<LeaveBalance[]> {
-  return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.PRIMARY_LEAVE_APPROVALS)
+export async function getPrimaryLeaveApprovals(): Promise<LeaveRecord[]> {
+  return apiRequest<LeaveRecord[]>(API_CONFIG.ENDPOINTS.PRIMARY_LEAVE_APPROVALS)
 }
 
 export async function approvePrimaryLeave(
@@ -959,8 +962,8 @@ export async function approvePrimaryLeave(
   )
 }
 
-export async function getSecondaryLeaveApprovals(): Promise<LeaveBalance[]> {
-  return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.SECONDARY_LEAVE_APPROVALS)
+export async function getSecondaryLeaveApprovals(): Promise<LeaveRecord[]> {
+  return apiRequest<LeaveRecord[]>(API_CONFIG.ENDPOINTS.SECONDARY_LEAVE_APPROVALS)
 }
 
 export async function approveSecondaryLeave(
