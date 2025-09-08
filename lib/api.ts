@@ -40,14 +40,17 @@ export interface AttendanceRecord {
   shift: number
   punch_in: string | null
   punch_out: string | null
-  hours_worked: number
+  hours_worked: string | null
   attendance_status: "present" | "absent" | "leave" | "late"
-  pay_type: "full_day" | "half_day" | "unpaid"
+  pay_type: "full_day" | "half_day" | "unpaid" | "leave" | "overtime" | "no_punch_out"
   overtime_status: string | null
   overtime_approved_by: string | null
   created_at: string
   updated_at: string
   updated_by: string
+  first_name: string
+  last_name: string
+  employee_id: number
 }
 
 export interface DashboardStats {
@@ -256,11 +259,11 @@ export interface LeaveRequest {
 export interface SkillApproval {
   id: number;
   employee_id: number;
-  employee_name: string;
+  first_name:string
+  last_name:string
+  created_at:string
   skill_name: string;
-  proficiency_level: string;
   status: "pending" | "approved" | "rejected";
-  requested_date: string;
 }
 
 export interface LoanApproval {
@@ -1068,17 +1071,23 @@ export async function deleteEmployeeBankDetails(employeeId: number): Promise<voi
 }
 
 // Attendance Management APIs
-export async function punchIn(): Promise<{ message: string; attendanceStatus: string }> {
+export async function punchIn(time_local:string,timezone:string,employee_id:number): Promise<{ message: string; attendanceStatus: string }> {
+  const data = {time_local:time_local, timezone:timezone, employee_id:employee_id}
   return apiRequest<{ message: string; attendanceStatus: string }>(API_CONFIG.ENDPOINTS.PUNCH_IN, {
     method: "POST",
+    body: JSON.stringify(data)
   })
 }
 
-export async function punchOut(): Promise<{ message: string; hoursWorked: number }> {
-  return apiRequest<{ message: string; hoursWorked: number }>(API_CONFIG.ENDPOINTS.PUNCH_OUT, {
+export async function punchOut(time_local:string,timezone:string,employee_id:number): Promise<{ message: string; attendanceStatus: string }> {
+  const data = {time_local:time_local, timezone:timezone,employee_id:employee_id}
+  return apiRequest<{ message: string; attendanceStatus: string }>(API_CONFIG.ENDPOINTS.PUNCH_OUT, {
     method: "POST",
+    body: JSON.stringify(data)
   })
 }
+
+
 
 export async function getAttendanceRecords(): Promise<AttendanceRecord[]> {
     return apiRequest<AttendanceRecord[]>(API_CONFIG.ENDPOINTS.ATTENDANCE_ALL);
