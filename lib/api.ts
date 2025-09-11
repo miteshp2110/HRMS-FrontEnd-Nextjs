@@ -339,6 +339,88 @@ export interface LeaveType {
   max_balance: number
 }
 
+
+export interface MyDashboardData {
+  monthlyAttendance: AttendanceRecord[];
+  pendingOvertimeRequests: { attendance_date: string; hours_worked: string }[];
+  leaveBalances: { name: string; balance: string }[];
+  documentStatus: {
+    expiringSoon: { name: string; expiry_date: string }[];
+    notUploaded: { name: string }[];
+  };
+  upcomingHoliday: { name: string; holiday_date: string } | null;
+  upcomingLeave: { from_date: string; to_date: string } | null;
+  ongoingLoans: {
+    title: string;
+    principal_amount: string;
+    emi_amount: string;
+    remaining_installments: number;
+  }[];
+  reportingManager: string | null;
+}
+
+export interface AdminDashboardData {
+  headcount: number;
+  todayAttendance: {
+    present: number;
+    absent: number;
+    leave: number;
+    late: number;
+  };
+  expiringDocuments: {
+    id: number;
+    employee_name: string;
+    document_name: string;
+    expiry_date: string;
+  }[];
+  pendingLeaveApprovals: {
+    primary: number;
+    secondary: number;
+  };
+  pendingSkillRequests: {
+    id: number;
+    employee_name: string;
+    skill_name: string;
+    created_at: string;
+  }[];
+  pendingLoanRequests: any[]; // Or a more specific type if you have it
+}
+
+
+
+export interface LeaveRecordHistory {
+  id: number;
+  leave_description: string;
+  applied_date: string;
+  from_date: string;
+  to_date: string;
+  rejection_reason: string | null;
+  primary_status: boolean | null;
+  secondry_status: boolean | null;
+  leave_type_name: string;
+  employee_name: string;
+  employee_id: number; // Assuming this is available, if not, it can be removed
+  primary_approver_name: string | null;
+  secondary_approver_name: string | null;
+  your_approval_level?: "primary" | "secondary";
+}
+
+
+export async function getApprovalHistory(startDate: string, endDate: string): Promise<LeaveRecordHistory[]> {
+  const params = new URLSearchParams({ startDate, endDate });
+  return apiRequest<LeaveRecordHistory[]>(`/leaves/history?${params.toString()}`);
+}
+
+
+export async function getAdminDashboardData(): Promise<AdminDashboardData> {
+  return apiRequest<AdminDashboardData>("/dashboard/admin");
+}
+
+
+export async function getMyDashboardData(): Promise<MyDashboardData> {
+  return apiRequest<MyDashboardData>("/dashboard/me");
+}
+
 // Real API functions replacing mock implementations
 export async function getLeaveBalances(): Promise<LeaveBalance[]> {
   return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.LEAVE_BALANCE)

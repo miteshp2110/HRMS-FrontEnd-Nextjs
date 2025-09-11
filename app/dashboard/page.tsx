@@ -1,89 +1,154 @@
+// "use client"
+
+// import { useEffect, useState } from "react"
+// import { useAuth } from "@/lib/auth-context"
+// import { MainLayout } from "@/components/main-layout"
+// import { getMyDashboardData, type MyDashboardData } from "@/lib/api"
+// import { useToast } from "@/hooks/use-toast"
+// import { WelcomeWidget } from "@/components/dashboard/widgets/welcome-widget"
+// import { AttendanceWidget } from "@/components/dashboard/widgets/attendance-widget"
+// import { LeaveBalanceWidget } from "@/components/dashboard/widgets/leave-balance-widget"
+// import { DocumentStatusWidget } from "@/components/dashboard/widgets/document-status-widget"
+// import { AnnouncementsWidget } from "@/components/dashboard/widgets/announcements-widget"
+// import { LoanStatusWidget } from "@/components/dashboard/widgets/loan-status-widget"
+// import { OvertimeWidget } from "@/components/dashboard/widgets/overtime-widget"
+// import { AdminStatsWidget } from "@/components/dashboard/admin/admin-stats-widget"
+// import { ExpiringDocumentsWidget } from "@/components/dashboard/admin/expiring-documents-widget"
+// import { PendingApprovalsWidget } from "@/components/dashboard/admin/pending-approvals-widget"
+
+// export default function DashboardPage() {
+//   const { user } = useAuth()
+//   const { toast } = useToast()
+//   const [dashboardData, setDashboardData] = useState<MyDashboardData | null>(null)
+//   const [isLoading, setIsLoading] = useState(true)
+
+//   useEffect(() => {
+//     const fetchDashboardData = async () => {
+//       setIsLoading(true);
+//       try {
+//         const data = await getMyDashboardData();
+//         setDashboardData(data);
+//       } catch (error) {
+//         console.error("Error fetching dashboard data:", error)
+//         toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive"})
+//       } finally {
+//         setIsLoading(false)
+//       }
+//     }
+//     fetchDashboardData()
+//   }, [toast])
+
+//   if (isLoading || !dashboardData) {
+//     return (
+//       <MainLayout>
+//         <div className="flex items-center justify-center h-full">
+//           <div className="text-center">
+//             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+//             <p className="text-muted-foreground">Loading your dashboard...</p>
+//           </div>
+//         </div>
+//       </MainLayout>
+//     )
+//   }
+
+//   return (
+//     <MainLayout>
+//       <div className="space-y-6">
+        
+//         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+//             <div className="lg:col-span-2 space-y-6">
+//                 <WelcomeWidget reportingManager={dashboardData.reportingManager} />
+//                 <AdminStatsWidget />
+//                 <AttendanceWidget attendanceData={dashboardData.monthlyAttendance} />
+//                 <OvertimeWidget pendingOvertime={dashboardData.pendingOvertimeRequests} />
+//                 <LoanStatusWidget ongoingLoans={dashboardData.ongoingLoans} />
+//             </div>
+//             <div className="lg:col-span-1 space-y-6">
+//                 <DocumentStatusWidget documentStatus={dashboardData.documentStatus} />
+//                 <AnnouncementsWidget 
+//                     upcomingHoliday={dashboardData.upcomingHoliday}
+//                     upcomingLeave={dashboardData.upcomingLeave}
+//                 />
+//                 <LeaveBalanceWidget leaveBalances={dashboardData.leaveBalances} />
+//             </div>
+//         </div>
+//       </div>
+//     </MainLayout>
+//   )
+// }
+
+
 "use client"
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { MainLayout } from "@/components/main-layout"
-import { StatsCards } from "@/components/dashboard/stats-cards"
-import { LeaveBalanceChart } from "@/components/dashboard/leave-balance-chart"
-import { AttendanceSummary } from "@/components/dashboard/attendance-summary"
-import { CompanyAttendanceChart } from "@/components/dashboard/company-attendance-chart"
-import { HeadcountTrendsChart } from "@/components/dashboard/headcount-trends-chart"
-import {
-  getLeaveBalances,
-  getMyAttendance,
-  getDashboardStats,
-  getHeadcountTrends,
-  type LeaveBalance,
-  type AttendanceRecord,
-  type DashboardStats,
-} from "@/lib/api"
+import { getMyDashboardData, getAdminDashboardData, type MyDashboardData, type AdminDashboardData } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+
+// Personal Dashboard Widgets
+import { WelcomeWidget } from "@/components/dashboard/widgets/welcome-widget"
+import { AttendanceWidget } from "@/components/dashboard/widgets/attendance-widget"
+import { LeaveBalanceWidget } from "@/components/dashboard/widgets/leave-balance-widget"
+import { DocumentStatusWidget } from "@/components/dashboard/widgets/document-status-widget"
+import { AnnouncementsWidget } from "@/components/dashboard/widgets/announcements-widget"
+import { LoanStatusWidget } from "@/components/dashboard/widgets/loan-status-widget"
+import { OvertimeWidget } from "@/components/dashboard/widgets/overtime-widget"
+
+// Admin Dashboard Widgets
+import { Separator } from "@/components/ui/separator"
+import { AdminStatsWidget } from "@/components/dashboard/admin/admin-stats-widget"
+import { ExpiringDocumentsWidget } from "@/components/dashboard/admin/expiring-documents-widget"
+import { PendingApprovalsWidget } from "@/components/dashboard/admin/pending-approvals-widget"
 
 export default function DashboardPage() {
   const { user, hasPermission } = useAuth()
   const { toast } = useToast()
-  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([])
-  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([])
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null)
-  const [headcountTrends, setHeadcountTrends] = useState<Array<{ month: string; headcount: number }>>([])
+  
+  const [myData, setMyData] = useState<MyDashboardData | null>(null)
+  const [adminData, setAdminData] = useState<AdminDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const isManager = hasPermission("leaves.manage") || hasPermission("attendance.manage") || hasPermission("user.manage")
+  const isManager = hasPermission("user.manage") || hasPermission("leaves.manage");
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        const promises = [
-          getLeaveBalances(),
-          getMyAttendance(),
-          getDashboardStats(),
-          getHeadcountTrends(),
-        ];
-        
-        const [balances, attendance, stats, trends] = await Promise.all(
-            promises.map(p => p.catch(e => {
-                console.error("Dashboard API call failed:", e);
-                return null; // Return null on error to not break Promise.all
-            }))
-        );
+        const myDataPromise = getMyDashboardData();
+        let adminDataPromise = Promise.resolve(null as AdminDashboardData | null);
 
-        if (Array.isArray(balances) && balances.length > 0 && "leave_type_name" in balances[0]) {
-          setLeaveBalances(balances as LeaveBalance[]);
+        if (isManager) {
+            adminDataPromise = getAdminDashboardData();
         }
-        if (Array.isArray(attendance) && attendance.length > 0 && "attendance_date" in attendance[0]) {
-          setAttendanceData(attendance as AttendanceRecord[]);
+
+        const [myResult, adminResult] = await Promise.all([
+            myDataPromise.catch(e => { console.error("MyData fetch failed:", e); return null; }),
+            adminDataPromise.catch(e => { console.error("AdminData fetch failed:", e); return null; }),
+        ]);
+
+        if (!myResult) {
+            toast({ title: "Error", description: "Could not load your personal dashboard data.", variant: "destructive"});
         }
-        if (stats && typeof stats === "object" && !Array.isArray(stats)) setDashboardStats(stats as DashboardStats);
-        if (
-          Array.isArray(trends) &&
-          trends.length > 0 &&
-          typeof trends[0] === "object" &&
-          "month" in trends[0] &&
-          "headcount" in trends[0]
-        ) {
-          setHeadcountTrends(trends as Array<{ month: string; headcount: number }>);
-        }
+        
+        setMyData(myResult);
+        setAdminData(adminResult);
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
-        toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive"})
+        toast({ title: "Error", description: "A critical error occurred while loading the dashboard.", variant: "destructive"})
       } finally {
         setIsLoading(false)
       }
     }
-
     fetchDashboardData()
-  }, [toast])
+  }, [toast, isManager])
 
-  if (isLoading) {
+  if (isLoading || !myData) {
     return (
       <MainLayout>
         <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading dashboard...</p>
-          </div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </MainLayout>
     )
@@ -92,36 +157,38 @@ export default function DashboardPage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        {/* Welcome Section */}
-        <div>
-          <h1 className="text-3xl font-bold text-balance">
-            Welcome back, {user?.firstName || user?.email?.split("@")[0] || "User"}!
-          </h1>
-          <p className="text-muted-foreground">Here's what's happening in your organization today.</p>
-        </div>
+        
+        <WelcomeWidget reportingManager={myData.reportingManager} />
+        {isManager && adminData && (
+          <>
+                
+                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+                    <AdminStatsWidget headcount={adminData.headcount} todayAttendance={adminData.todayAttendance} />
+                    {hasPermission('leaves.manage') && <PendingApprovalsWidget leaves={adminData.pendingLeaveApprovals} skills={adminData.pendingSkillRequests} loans={adminData.pendingLoanRequests} />}
 
-        {/* Stats Cards */}
-        {dashboardStats && <StatsCards stats={dashboardStats} showManagerStats={isManager} />}
-
-        {/* Charts Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* User-specific charts */}
-          <LeaveBalanceChart data={leaveBalances} />
-          <AttendanceSummary data={attendanceData} />
-
-          {/* Manager/Admin charts */}
-          {isManager && dashboardStats && (
-            <>
-              <CompanyAttendanceChart
-                data={{
-                  presentToday: dashboardStats.presentToday,
-                  absentToday: dashboardStats.absentToday,
-                  onLeaveToday: dashboardStats.onLeaveToday,
-                }}
-              />
-              <HeadcountTrendsChart data={headcountTrends} />
+                    <div className="space-y-6">
+                        
+                        {hasPermission('documents.manage') && <ExpiringDocumentsWidget documents={adminData.expiringDocuments} />}
+                    </div>
+                    
+                </div>
+                
             </>
-          )}
+        )}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+                <AttendanceWidget attendanceData={myData.monthlyAttendance} />
+                <OvertimeWidget pendingOvertime={myData.pendingOvertimeRequests} />
+            </div>
+            <div className="lg:col-span-1 space-y-6">
+                <DocumentStatusWidget documentStatus={myData.documentStatus} />
+                <AnnouncementsWidget 
+                    upcomingHoliday={myData.upcomingHoliday}
+                    upcomingLeave={myData.upcomingLeave}
+                />
+                <LeaveBalanceWidget leaveBalances={myData.leaveBalances} />
+                <LoanStatusWidget ongoingLoans={myData.ongoingLoans} />
+            </div>
         </div>
       </div>
     </MainLayout>

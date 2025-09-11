@@ -1,6 +1,7 @@
+
 // "use client"
 
-// import { useState, useEffect } from "react"
+// import { useState, useEffect, useCallback } from "react"
 // import { useAuth } from "@/lib/auth-context"
 // import { MainLayout } from "@/components/main-layout"
 // import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -8,67 +9,88 @@
 // import { Badge } from "@/components/ui/badge"
 // import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 // import { Input } from "@/components/ui/input"
-// import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+// import { Label } from "@/components/ui/label"
 // import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-// import { UserPlus, Search, Filter, CheckCircle, XCircle, Clock, AlertCircle } from "lucide-react"
-// import Link from "next/link"
-// import { getLeaveRequests, approvePrimaryLeave, type LeaveRecord } from "@/lib/api"
+// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+// import { UserPlus, AlertCircle, CheckCircle, History, Filter } from "lucide-react"
+// import { getPrimaryLeaveApprovals, getSecondaryLeaveApprovals, getApprovalHistory, approvePrimaryLeave, approveSecondaryLeave, type LeaveRecord, LeaveRecordHistory } from "@/lib/api"
 // import { useToast } from "@/hooks/use-toast"
+// import { LeaveApprovalDialog } from "@/components/management/leave-approval-dialog"
+
 
 // export default function LeaveManagementPage() {
-//   const { hasPermission } = useAuth()
+//   const { hasPermission, user } = useAuth()
 //   const { toast } = useToast()
-//   const [leaves, setLeaves] = useState<LeaveRecord[]>([])
+  
+//   const [primaryRequests, setPrimaryRequests] = useState<LeaveRecord[]>([])
+//   const [secondaryRequests, setSecondaryRequests] = useState<LeaveRecord[]>([])
+//   const [historyRequests, setHistoryRequests] = useState<LeaveRecordHistory[]>([])
 //   const [loading, setLoading] = useState(true)
-//   const [searchTerm, setSearchTerm] = useState("")
-//   const [statusFilter, setStatusFilter] = useState("pending")
+  
+//   const [selectedLeave, setSelectedLeave] = useState<LeaveRecord | null>(null)
+//   const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+//   const [dateRange, setDateRange] = useState({
+//     from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+//     to: new Date().toISOString().split('T')[0]
+//   });
 
 //   const canManageLeaves = hasPermission("leaves.manage")
 
-//   const fetchLeaves = async () => {
-//     if (!canManageLeaves) {
-//         setLoading(false);
-//         return;
-//     }
+//   const fetchPendingLeaves = useCallback(async () => {
+//     if (!canManageLeaves) { setLoading(false); return; }
+//     setLoading(true);
 //     try {
-//       setLoading(true);
-//       const data = await getLeaveRequests()
-//       setLeaves(data as LeaveRecord[] | [])
+//       const [primaryData, secondaryData] = await Promise.all([
+//         getPrimaryLeaveApprovals(),
+//         getSecondaryLeaveApprovals()
+//       ]);
+//       setPrimaryRequests(primaryData.filter(r => r.primary_status == false && r.primary_user === user?.id));
+//       setSecondaryRequests(secondaryData.filter(r => r.primary_status == true && r.secondry_status == false));
 //     } catch (error) {
-//       toast({ title: "Error", description: "Could not fetch leave requests.", variant: "destructive" });
+//       toast({ title: "Error", description: "Could not fetch pending leave requests.", variant: "destructive" });
 //     } finally {
-//       setLoading(false)
+//       setLoading(false);
 //     }
-//   }
+//   }, [canManageLeaves, user, toast]);
+
+//   const fetchHistoryLeaves = useCallback(async () => {
+//     if (!canManageLeaves) return;
+//     setLoading(true);
+//     try {
+//         const historyData = await getApprovalHistory(dateRange.from, dateRange.to);
+//         setHistoryRequests(historyData as LeaveRecordHistory[]|[]);
+//     } catch(error) {
+//         toast({ title: "Error", description: "Could not fetch approval history.", variant: "destructive" });
+//     } finally {
+//         setLoading(false);
+//     }
+//   }, [canManageLeaves, dateRange, toast]);
 
 //   useEffect(() => {
-//     fetchLeaves()
-//   }, [canManageLeaves])
+//     fetchPendingLeaves();
+//     fetchHistoryLeaves();
+//   }, [fetchPendingLeaves, fetchHistoryLeaves]);
 
-//   const handleStatusUpdate = async (leaveId: number, status: boolean) => {
+//   const handleStatusUpdate = async (leaveId: number, status: boolean, reason?: string) => {
+//       const isSecondary = secondaryRequests.some(r => r.id === leaveId);
+//       const apiCall = isSecondary ? approveSecondaryLeave : approvePrimaryLeave;
 //     try {
-//       await approvePrimaryLeave(leaveId, status)
-//       toast({ title: "Success", description: `Leave request has been ${status ? 'approved' : 'rejected'}.` });
-//       fetchLeaves() // Refresh the list
+//       await apiCall(leaveId, status, reason)
+//       toast({ title: "Success", description: `Leave request has been updated.` });
+//       setIsDialogOpen(false);
+//       setSelectedLeave(null);
+//       fetchPendingLeaves(); // Refresh pending lists
+//       fetchHistoryLeaves(); // Also refresh history
 //     } catch (error: any) {
 //       toast({ title: "Error", description: error.message || "Failed to update leave status.", variant: "destructive" });
 //     }
 //   }
 
-//   const getStatusFromRecord = (record: LeaveRecord): "approved" | "rejected" | "pending" => {
-//     if (record.primary_status === false || record.secondry_status === false) return "rejected";
-//     if (record.primary_status === true && record.secondry_status === true) return "approved";
-//     return "pending";
-//   }
-
-//   const getStatusBadge = (status: "approved" | "rejected" | "pending") => {
-//     switch (status) {
-//       case "approved":
-//         return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>
-//       case "rejected":
-//         return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
-//       case "pending":
-//         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+//   const handleRowClick = (leave: LeaveRecord) => {
+//     if(getStatusFromRecord(leave) === 'pending') {
+//         setSelectedLeave(leave);
+//         setIsDialogOpen(true);
 //     }
 //   }
   
@@ -79,18 +101,72 @@
 //     const diffTime = Math.abs(end.getTime() - start.getTime());
 //     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 //   }
+  
+//   const getStatusFromRecord = (record: LeaveRecord): "approved" | "rejected" | "pending" => {
+//     if (record.rejection_reason !== null || record.primary_status === false || record.secondry_status === false) return "rejected";
+//     if (record.primary_status === true && record.secondry_status === true) return "approved";
+//     return "pending";
+//   }
 
-//   const filteredLeaves = leaves.filter((leave) => {
-//     const employeeName = leave.primary_approver_name || ''; // Use a fallback
-//     const matchesSearch =
-//       employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-//       leave.leave_type_name.toLowerCase().includes(searchTerm.toLowerCase())
-    
-//     const status = getStatusFromRecord(leave);
-//     const matchesStatus = statusFilter === "all" || status === statusFilter
-    
-//     return matchesSearch && matchesStatus
-//   })
+//   const getStatusBadge = (status: "approved" | "rejected" | "pending") => { /* ... same as before ... */ }
+
+//   const renderRequestsTable = (requests: LeaveRecord[], type: 'primary' | 'secondary') => {
+//       if (loading) return <div className="text-center py-8">Loading requests...</div>;
+//       if (requests.length === 0) {
+//           return (
+//               <div className="text-center py-12 text-muted-foreground">
+//                   <CheckCircle className="h-10 w-10 mx-auto mb-4 text-green-500"/>
+//                   <p className="font-semibold">All Caught Up!</p>
+//                   <p className="text-sm">There are no pending {type} leave approvals.</p>
+//               </div>
+//           );
+//       }
+//       return (
+//         <Table>
+//           <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Leave Type</TableHead><TableHead>Dates</TableHead><TableHead>Days</TableHead></TableRow></TableHeader>
+//           <TableBody>
+//             {requests.map((leave) => (
+//               <TableRow key={leave.id} onClick={() => handleRowClick(leave)} className="cursor-pointer hover:bg-muted/50">
+//                 <TableCell className="font-medium">{leave.employee_name}</TableCell>
+//                 <TableCell>{leave.leave_type_name}</TableCell>
+//                 <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
+//                 <TableCell>{calculateLeaveDays(leave.from_date, leave.to_date)}</TableCell>
+//               </TableRow>
+//             ))}
+//           </TableBody>
+//         </Table>
+//       )
+//   }
+  
+//   const renderHistoryTable = (requests: LeaveRecordHistory[]) => {
+//       if (loading) return <div className="text-center py-8">Loading history...</div>;
+//       if (requests.length === 0) {
+//           return (
+//               <div className="text-center py-12 text-muted-foreground">
+//                   <History className="h-10 w-10 mx-auto mb-4"/>
+//                   <p>You have not actioned any leave requests in this period.</p>
+//               </div>
+//           );
+//       }
+//       return (
+//         <>
+//         <Table>
+//           <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Leave Type</TableHead><TableHead>Dates</TableHead><TableHead>Your Action</TableHead><TableHead>Final Status</TableHead></TableRow></TableHeader>
+//           <TableBody>
+//             {requests.map((leave) => (
+//               <TableRow key={leave.id}>
+//                 <TableCell className="font-medium">{leave.employee_name}</TableCell>
+//                 <TableCell>{leave.leave_type_name}</TableCell>
+//                 <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
+//                 <TableCell><Badge variant="outline" className="capitalize">My Action</Badge></TableCell>
+//                 <TableCell>Hi</TableCell>
+//               </TableRow>
+//             ))}
+//           </TableBody>
+//         </Table>
+//         </>
+//       )
+//   }
 
 //   return (
 //     <MainLayout>
@@ -104,115 +180,70 @@
 //             <Alert variant="destructive">
 //                 <AlertCircle className="h-4 w-4" />
 //                 <AlertTitle>Access Denied</AlertTitle>
-//                 <AlertDescription>
-//                 You don't have permission to manage leave requests.
-//                 </AlertDescription>
+//                 <AlertDescription>You don't have permission to manage leave requests.</AlertDescription>
 //             </Alert>
 //         ) : (
-//           <Card>
-//             <CardHeader>
-//               <CardTitle>Leave Requests</CardTitle>
-//               <CardDescription>Review and approve or reject employee leave requests.</CardDescription>
-//               <div className="flex gap-4 pt-4">
-//                 <div className="relative flex-1">
-//                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-//                   <Input
-//                     placeholder="Search by employee name or leave type..."
-//                     value={searchTerm}
-//                     onChange={(e) => setSearchTerm(e.target.value)}
-//                     className="pl-10"
-//                   />
-//                 </div>
-//                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-//                   <SelectTrigger className="w-48">
-//                     <Filter className="h-4 w-4 mr-2" />
-//                     <SelectValue placeholder="Filter by status" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     <SelectItem value="all">All Status</SelectItem>
-//                     <SelectItem value="pending">Pending</SelectItem>
-//                     <SelectItem value="approved">Approved</SelectItem>
-//                     <SelectItem value="rejected">Rejected</SelectItem>
-//                   </SelectContent>
-//                 </Select>
-//               </div>
-//             </CardHeader>
-//             <CardContent>
-//               {loading ? (
-//                 <div className="text-center py-8">Loading leave requests...</div>
-//               ) : (
-//                 <Table>
-//                   <TableHeader>
-//                     <TableRow>
-//                       <TableHead>Employee</TableHead>
-//                       <TableHead>Leave Type</TableHead>
-//                       <TableHead>Dates</TableHead>
-//                       <TableHead>Days</TableHead>
-//                       <TableHead>Status</TableHead>
-//                       <TableHead className="text-right">Actions</TableHead>
-//                     </TableRow>
-//                   </TableHeader>
-//                   <TableBody>
-//                     {filteredLeaves.map((leave) => (
-//                       <TableRow key={leave.id}>
-//                         <TableCell>
-//                           <Link href={`/directory/${leave.id}`} className="font-medium text-primary hover:underline">
-//                             {leave.primary_approver_name || `Employee ID: ${leave.id}`}
-//                           </Link>
-//                         </TableCell>
-//                         <TableCell>{leave.leave_type_name}</TableCell>
-//                         <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
-//                         <TableCell>{calculateLeaveDays(leave.from_date, leave.to_date)}</TableCell>
-//                         <TableCell>{getStatusBadge(getStatusFromRecord(leave))}</TableCell>
-//                         <TableCell className="text-right">
-//                           {getStatusFromRecord(leave) === "pending" && (
-//                             <div className="flex gap-2 justify-end">
-//                               <Button
-//                                 size="sm"
-//                                 variant="outline"
-//                                 className="border-green-500 text-green-600 hover:bg-green-50 hover:text-green-700"
-//                                 onClick={() => handleStatusUpdate(leave.id, true)}
-//                               >
-//                                 <CheckCircle className="h-4 w-4 mr-2" /> Approve
-//                               </Button>
-//                               <Button
-//                                 size="sm"
-//                                 variant="outline"
-//                                 className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-//                                 onClick={() => handleStatusUpdate(leave.id, false)}
-//                               >
-//                                 <XCircle className="h-4 w-4 mr-2" /> Reject
-//                               </Button>
+//             <Tabs defaultValue="primary">
+//                 <TabsList className="grid w-full grid-cols-3">
+//                     <TabsTrigger value="primary">Primary Approvals <Badge className="ml-2">{primaryRequests.length}</Badge></TabsTrigger>
+//                     <TabsTrigger value="secondary">Secondary Approvals <Badge className="ml-2">{secondaryRequests.length}</Badge></TabsTrigger>
+//                     <TabsTrigger value="history">Approval History</TabsTrigger>
+//                 </TabsList>
+//                 <TabsContent value="primary">
+//                     <Card><CardHeader><CardTitle>Awaiting Your Approval</CardTitle><CardDescription>These requests need your decision to proceed.</CardDescription></CardHeader><CardContent>{renderRequestsTable(primaryRequests, 'primary')}</CardContent></Card>
+//                 </TabsContent>
+//                 <TabsContent value="secondary">
+//                      <Card><CardHeader><CardTitle>Awaiting Final Approval</CardTitle><CardDescription>These requests have been approved by the primary manager and require your final decision.</CardDescription></CardHeader><CardContent>{renderRequestsTable(secondaryRequests, 'secondary')}</CardContent></Card>
+//                 </TabsContent>
+//                  <TabsContent value="history">
+//                      <Card>
+//                         <CardHeader>
+//                             <CardTitle>Your Approval History</CardTitle>
+//                             <CardDescription>A log of all leave requests you have previously actioned.</CardDescription>
+//                             <div className="flex gap-4 pt-4">
+//                                 <div className="grid gap-2 w-full"><Label htmlFor="from-date">From Date</Label><Input id="from-date" type="date" value={dateRange.from} onChange={(e) => setDateRange(dr => ({...dr, from: e.target.value}))}/></div>
+//                                 <div className="grid gap-2 w-full"><Label htmlFor="to-date">To Date</Label><Input id="to-date" type="date" value={dateRange.to} onChange={(e) => setDateRange(dr => ({...dr, to: e.target.value}))}/></div>
+//                                 <div className="flex items-end"><Button onClick={fetchHistoryLeaves}><Filter className="h-4 w-4 mr-2" />Filter</Button></div>
 //                             </div>
-//                           )}
-//                         </TableCell>
-//                       </TableRow>
-//                     ))}
-//                   </TableBody>
-//                 </Table>
-//               )}
-//             </CardContent>
-//           </Card>
+//                         </CardHeader>
+//                         <CardContent>{renderHistoryTable(historyRequests)}</CardContent>
+//                     </Card>
+//                 </TabsContent>
+//             </Tabs>
 //         )}
 //       </div>
+      
+//       <LeaveApprovalDialog 
+//         leaveRecord={selectedLeave}
+//         open={isDialogOpen}
+//         onOpenChange={setIsDialogOpen}
+//         onStatusUpdate={handleStatusUpdate}
+//       />
 //     </MainLayout>
 //   )
 // }
 
 
+
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/lib/auth-context"
 import { MainLayout } from "@/components/main-layout"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
-import { UserPlus, AlertCircle, CheckCircle, Clock, Badge } from "lucide-react"
-import { getPrimaryLeaveApprovals, getSecondaryLeaveApprovals, approvePrimaryLeave, approveSecondaryLeave, type LeaveRecord } from "@/lib/api"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { UserPlus, AlertCircle, CheckCircle, History, Filter, Info, XCircle, Clock } from "lucide-react"
+import { getPrimaryLeaveApprovals, getSecondaryLeaveApprovals, getApprovalHistory, approvePrimaryLeave, approveSecondaryLeave, type LeaveRecord, LeaveRecordHistory } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { LeaveApprovalDialog } from "@/components/management/leave-approval-dialog"
+
 
 export default function LeaveManagementPage() {
   const { hasPermission, user } = useAuth()
@@ -220,55 +251,79 @@ export default function LeaveManagementPage() {
   
   const [primaryRequests, setPrimaryRequests] = useState<LeaveRecord[]>([])
   const [secondaryRequests, setSecondaryRequests] = useState<LeaveRecord[]>([])
+  const [historyRequests, setHistoryRequests] = useState<LeaveRecordHistory[]>([])
   const [loading, setLoading] = useState(true)
   
   const [selectedLeave, setSelectedLeave] = useState<LeaveRecord | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
+  const [dateRange, setDateRange] = useState({
+    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    to: new Date().toISOString().split('T')[0]
+  });
+
   const canManageLeaves = hasPermission("leaves.manage")
 
-  const fetchLeaves = async () => {
-    if (!canManageLeaves) {
-      setLoading(false);
-      return;
-    }
+  const fetchPendingLeaves = useCallback(async () => {
+    if (!canManageLeaves) { setLoading(false); return; }
     setLoading(true);
     try {
       const [primaryData, secondaryData] = await Promise.all([
         getPrimaryLeaveApprovals(),
         getSecondaryLeaveApprovals()
       ]);
-      // Filter for only pending requests at each level
-      setPrimaryRequests(primaryData.filter(r => r.primary_status == false && r.primary_user == user?.id));
+      setPrimaryRequests(primaryData.filter(r => r.primary_status == false && r.primary_user === user?.id));
       setSecondaryRequests(secondaryData.filter(r => r.primary_status == true && r.secondry_status == false));
     } catch (error) {
-      toast({ title: "Error", description: "Could not fetch leave requests.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not fetch pending leave requests.", variant: "destructive" });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  }, [canManageLeaves, user, toast]);
+
+  const fetchHistoryLeaves = useCallback(async () => {
+    if (!canManageLeaves) return;
+    setLoading(true);
+    try {
+        const historyData = await getApprovalHistory(dateRange.from, dateRange.to);
+        setHistoryRequests(historyData as LeaveRecordHistory[]|[]);
+    } catch(error) {
+        toast({ title: "Error", description: "Could not fetch approval history.", variant: "destructive" });
+    } finally {
+        setLoading(false);
+    }
+  }, [canManageLeaves, dateRange, toast]);
 
   useEffect(() => {
-    fetchLeaves()
-  }, [canManageLeaves, user])
+    fetchPendingLeaves();
+    fetchHistoryLeaves();
+  }, [fetchPendingLeaves, fetchHistoryLeaves]);
 
-  const handleStatusUpdate = async (leaveId: number, status: boolean) => {
+  const handleStatusUpdate = async (leaveId: number, status: boolean, reason?: string) => {
       const isSecondary = secondaryRequests.some(r => r.id === leaveId);
       const apiCall = isSecondary ? approveSecondaryLeave : approvePrimaryLeave;
     try {
-      await apiCall(leaveId, status)
+      await apiCall(leaveId, status, reason)
       toast({ title: "Success", description: `Leave request has been updated.` });
       setIsDialogOpen(false);
       setSelectedLeave(null);
-      fetchLeaves(); // Refresh the list
+      fetchPendingLeaves(); // Refresh pending lists
+      fetchHistoryLeaves(); // Also refresh history
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to update leave status.", variant: "destructive" });
     }
   }
 
-  const handleRowClick = (leave: LeaveRecord) => {
-    setSelectedLeave(leave);
-    setIsDialogOpen(true);
+  const handleRowClick = (leave: LeaveRecord, e: React.MouseEvent) => {
+    // Don't trigger row click if clicking on the info icon
+    if ((e.target as HTMLElement).closest('[data-info-icon]')) {
+      return;
+    }
+    
+    if(getStatusFromRecord(leave) === 'pending') {
+        setSelectedLeave(leave);
+        setIsDialogOpen(true);
+    }
   }
   
   const calculateLeaveDays = (startDate: Date, endDate: Date) => {
@@ -278,31 +333,144 @@ export default function LeaveManagementPage() {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
+  
+  const getStatusFromRecord = (leave:LeaveRecord): "approved" | "rejected" | "pending" => {
+    if (leave.rejection_reason != null ) return "rejected";
+    if (leave.primary_status == true && leave.secondry_status == true) return "approved";
+    return "pending";
+  }
 
-  const renderRequestsTable = (requests: LeaveRecord[]) => {
+    const getStatusBadge = (status: "approved" | "rejected" | "pending") => {
+    switch (status) {
+      case "approved":
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"><CheckCircle className="h-3 w-3 mr-1" />Approved</Badge>
+      case "rejected":
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Rejected</Badge>
+      case "pending":
+        return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pending</Badge>
+    }
+  }
+
+  const renderRequestsTable = (requests: LeaveRecord[], type: 'primary' | 'secondary') => {
       if (loading) return <div className="text-center py-8">Loading requests...</div>;
       if (requests.length === 0) {
           return (
               <div className="text-center py-12 text-muted-foreground">
                   <CheckCircle className="h-10 w-10 mx-auto mb-4 text-green-500"/>
-                  <p>No pending leave requests here. All caught up!</p>
+                  <p className="font-semibold">All Caught Up!</p>
+                  <p className="text-sm">There are no pending {type} leave approvals.</p>
               </div>
           );
       }
       return (
-        <Table>
-          <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Leave Type</TableHead><TableHead>Dates</TableHead><TableHead>Days</TableHead></TableRow></TableHeader>
-          <TableBody>
-            {requests.map((leave) => (
-              <TableRow key={leave.id} onClick={() => handleRowClick(leave)} className="cursor-pointer">
-                <TableCell className="font-medium">{leave.employee_name}</TableCell>
-                <TableCell>{leave.leave_type_name}</TableCell>
-                <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
-                <TableCell>{calculateLeaveDays(leave.from_date, leave.to_date)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <TooltipProvider>
+          <Table>
+            <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Leave Type</TableHead><TableHead>Dates</TableHead><TableHead>Days</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {requests.map((leave) => (
+                <TableRow 
+                  key={leave.id} 
+                  onClick={(e) => handleRowClick(leave, e)} 
+                  className="cursor-pointer hover:bg-muted/50 group relative"
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {leave.employee_name}
+                      {leave.rejection_reason && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              data-info-icon
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            >
+                              <Info className="h-4 w-4 text-red-500 cursor-help" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="text-sm">
+                              <p className="font-semibold text-red-600 mb-1">Rejection Reason:</p>
+                              <p>{leave.rejection_reason}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{leave.leave_type_name}</TableCell>
+                  <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
+                  <TableCell>{calculateLeaveDays(leave.from_date, leave.to_date)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TooltipProvider>
+      )
+  }
+  
+  const renderHistoryTable = (requests: LeaveRecordHistory[]) => {
+      if (loading) return <div className="text-center py-8">Loading history...</div>;
+      if (requests.length === 0) {
+          return (
+              <div className="text-center py-12 text-muted-foreground">
+                  <History className="h-10 w-10 mx-auto mb-4"/>
+                  <p>You have not actioned any leave requests in this period.</p>
+              </div>
+          );
+      }
+      return (
+        <TooltipProvider>
+          <Table>
+            <TableHeader><TableRow><TableHead>Employee</TableHead><TableHead>Leave Type</TableHead><TableHead>Dates</TableHead><TableHead>Your Action</TableHead><TableHead>Final Status</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {requests.map((leave) => (
+                <TableRow key={leave.id} className="group relative">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {leave.employee_name}
+                      {leave.rejection_reason && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div 
+                              data-info-icon
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            >
+                              <Info className="h-4 w-4 text-red-500 cursor-help" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="text-sm">
+                              <p className="font-semibold text-red-600 mb-1">Rejection Reason:</p>
+                              <p>{leave.rejection_reason}</p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>{leave.leave_type_name}</TableCell>
+                  <TableCell>{new Date(leave.from_date).toLocaleDateString()} - {new Date(leave.to_date).toLocaleDateString()}</TableCell>
+                  <TableCell><Badge variant="outline" className="capitalize">{(leave.your_approval_level==="primary"?(leave.primary_status==true?"Accepted":"Rejected"):(leave.secondry_status==true?"Accepted":"Rejected"))}</Badge></TableCell>
+                  <TableCell>{getStatusBadge(getStatusFromRecord({id:leave.id,
+                      leave_type_name:leave.leave_type_name,      
+                      leave_description: leave.leave_description,
+                      applied_date: new Date(leave.applied_date),
+                      from_date: new Date(leave.from_date),
+                      to_date: new Date(leave.to_date),
+                      rejection_reason: leave.rejection_reason,
+                      primary_status: leave.primary_status,
+                      secondry_status: leave.secondry_status,
+                      primary_approver_name: leave.primary_approver_name,
+                      secondary_approver_name: leave.secondary_approver_name,
+                      employee_id: leave.employee_id,
+                      employee_name:leave.employee_name,
+                      primary_user : 0
+  
+                  }))}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TooltipProvider>
       )
   }
 
@@ -322,25 +490,35 @@ export default function LeaveManagementPage() {
             </Alert>
         ) : (
             <Tabs defaultValue="primary">
-                <TabsList>
+                <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="primary">Primary Approvals <Badge className="ml-2">{primaryRequests.length}</Badge></TabsTrigger>
                     <TabsTrigger value="secondary">Secondary Approvals <Badge className="ml-2">{secondaryRequests.length}</Badge></TabsTrigger>
+                    <TabsTrigger value="history">Approval History</TabsTrigger>
                 </TabsList>
                 <TabsContent value="primary">
-                    <Card>
-                        <CardHeader><CardTitle>Awaiting Your Approval</CardTitle><CardDescription>These requests need your decision to proceed.</CardDescription></CardHeader>
-                        <CardContent>{renderRequestsTable(primaryRequests)}</CardContent>
-                    </Card>
+                    <Card><CardHeader><CardTitle>Awaiting Your Approval</CardTitle><CardDescription>These requests need your decision to proceed.</CardDescription></CardHeader><CardContent>{renderRequestsTable(primaryRequests, 'primary')}</CardContent></Card>
                 </TabsContent>
                 <TabsContent value="secondary">
+                     <Card><CardHeader><CardTitle>Awaiting Final Approval</CardTitle><CardDescription>These requests have been approved by the primary manager and require your final decision.</CardDescription></CardHeader><CardContent>{renderRequestsTable(secondaryRequests, 'secondary')}</CardContent></Card>
+                </TabsContent>
+                 <TabsContent value="history">
                      <Card>
-                        <CardHeader><CardTitle>Awaiting Final Approval</CardTitle><CardDescription>These requests have been approved by the primary manager and require your final decision.</CardDescription></CardHeader>
-                        <CardContent>{renderRequestsTable(secondaryRequests)}</CardContent>
+                        <CardHeader>
+                            <CardTitle>Your Approval History</CardTitle>
+                            <CardDescription>A log of all leave requests you have previously actioned.</CardDescription>
+                            <div className="flex gap-4 pt-4">
+                                <div className="grid gap-2 w-full"><Label htmlFor="from-date">From Date</Label><Input id="from-date" type="date" value={dateRange.from} onChange={(e) => setDateRange(dr => ({...dr, from: e.target.value}))}/></div>
+                                <div className="grid gap-2 w-full"><Label htmlFor="to-date">To Date</Label><Input id="to-date" type="date" value={dateRange.to} onChange={(e) => setDateRange(dr => ({...dr, to: e.target.value}))}/></div>
+                                <div className="flex items-end"><Button onClick={fetchHistoryLeaves}><Filter className="h-4 w-4 mr-2" />Filter</Button></div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>{renderHistoryTable(historyRequests)}</CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>
         )}
       </div>
+      
       <LeaveApprovalDialog 
         leaveRecord={selectedLeave}
         open={isDialogOpen}

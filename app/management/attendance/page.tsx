@@ -517,11 +517,11 @@ export default function AttendanceRecordsPage() {
                 <TableCell>{getStatusBadge(record.pay_type)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
-                    {type === "overtime" ? (
+                    {type === "overtime"  ? (
                       <Button size="sm" onClick={() => handleApproveOvertime(record.id)}>
                         <CheckCircle className="h-4 w-4 mr-2" /> Approve
                       </Button>
-                    ) : type === "punchout" || isNoPunchOut ? (
+                    ) : (type === "punchout"  || isNoPunchOut) && (record.attendance_status!='absent' && record.attendance_status!='leave') ? (
                       <Button 
                         size="sm" 
                         variant="outline"
