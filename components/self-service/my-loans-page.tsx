@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Plus, DollarSign } from "lucide-react"
+import { Plus, DollarSign, CheckCircle, XCircle, Clock, TrendingUp } from "lucide-react"
 import { getMyLoans, createLoan, type LoanRecord } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -98,19 +98,16 @@ export function MyLoansPage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    const variants = {
-      pending: "secondary",
-      approved: "default",
-      rejected: "destructive",
-      completed: "outline",
-    } as const
-
-    return (
-      <Badge variant={variants[status as keyof typeof variants] || "secondary"}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </Badge>
-    )
+  const getStatusBadge = (status: LoanRecord['status']) => {
+    const statusMap = {
+        pending_approval: { variant: "secondary", icon: Clock, label: "Pending" },
+        active: { variant: "default", icon: TrendingUp, label: "Active" },
+        approved: { variant: "default", icon: CheckCircle, label: "Approved" },
+        paid_off: { variant: "outline", icon: CheckCircle, label: "Paid Off" },
+        rejected: { variant: "destructive", icon: XCircle, label: "Rejected" },
+    } as const;
+    const {variant, icon: Icon, label} = statusMap[status] || { variant: "secondary", icon: Clock, label: status };
+    return <Badge variant={variant}><Icon className="h-3 w-3 mr-1"/>{label}</Badge>
   }
 
   if (loading) {
@@ -242,10 +239,10 @@ export function MyLoansPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">{loan.title}</TableCell>
-                  <TableCell>${loan.principal_amount.toLocaleString()}</TableCell>
+                  <TableCell>${Number(loan.principal_amount).toLocaleString()}</TableCell>
                   <TableCell>{loan.total_installments}</TableCell>
                   <TableCell>{getStatusBadge(loan.status)}</TableCell>
-                  <TableCell>{new Date(loan.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>{new Date(loan.request_date).toLocaleDateString()}</TableCell>
                   <TableCell>
                     {loan.disbursement_date ? new Date(loan.disbursement_date).toLocaleDateString() : "-"}
                   </TableCell>

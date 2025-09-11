@@ -1,7 +1,8 @@
+
+
 "use client"
 
-import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,9 +19,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Download, Eye, Plus, Search, AlertTriangle } from "lucide-react"
+import { Download, Plus, AlertTriangle, CheckCircle, FileWarning } from "lucide-react"
 import { getMyDocuments, getDocumentTypes, uploadDocument, type EmployeeDocument, type DocumentType } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import Link from "next/link"
 
 export function MyDocumentsPage() {
   const [documents, setDocuments] = useState<EmployeeDocument[]>([])
@@ -50,7 +52,6 @@ export function MyDocumentsPage() {
   useEffect(() => {
     fetchData()
   }, [])
-
 
   const handleUpload = async () => {
     if (!selectedFile || !selectedDocumentType) {
@@ -82,94 +83,143 @@ export function MyDocumentsPage() {
     }
   }
 
-    const isExpiringSoon = (expiryDate?: string) => {
-        if (!expiryDate) return false;
-        const diff = new Date(expiryDate).getTime() - new Date().getTime();
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-        return days > 0 && days <= 60; // Expiring within 60 days
-    };
+  const { expiringSoonDocs, missingDocs } = useMemo(() => {
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
-    const isExpired = (expiryDate?: string) => {
-        if (!expiryDate) return false;
-        return new Date(expiryDate) < new Date();
-    };
+    const expiringSoon = documents.filter(doc => {
+        if (!doc.expiry_date) return false;
+        const expiry = new Date(doc.expiry_date);
+        return expiry > new Date() && expiry <= thirtyDaysFromNow;
+    });
 
+    const uploadedDocTypeIds = new Set(documents.map(doc => doc.document_id));
+    const missing = documentTypes.filter(type => !uploadedDocTypeIds.has(type.id));
+
+    return { expiringSoonDocs: expiringSoon, missingDocs: missing };
+  }, [documents, documentTypes]);
+
+  const isExpired = (expiryDate?: string) => {
+      if (!expiryDate) return false;
+      return new Date(expiryDate) < new Date();
+  };
 
   const getStatusBadge = (expiryDate?: string) => {
     if (isExpired(expiryDate)) {
         return <Badge variant="destructive"><AlertTriangle className="h-3 w-3 mr-1" />Expired</Badge>
     }
-    if (isExpiringSoon(expiryDate)) {
-        return <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100"><AlertTriangle className="h-3 w-3 mr-1" />Expiring Soon</Badge>
+    if (expiringSoonDocs.some(d => d.expiry_date === expiryDate)) {
+        return <Badge className="bg-orange-100 text-orange-800"><AlertTriangle className="h-3 w-3 mr-1" />Expiring Soon</Badge>
     }
-    return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">Active</Badge>
+    return <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1" />Active</Badge>
   }
 
-
   return (
-    <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+    <div className="space-y-6">
+        <div className="flex justify-between items-center">
             <div>
-                <CardTitle>My Documents</CardTitle>
-                <CardDescription>Manage your personal documents and certificates.</CardDescription>
+                <h1 className="text-3xl font-bold">My Documents</h1>
+                <p className="text-muted-foreground">Manage your personal documents and certificates.</p>
             </div>
-            <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
-            <DialogTrigger asChild>
-                <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Upload Document
-                </Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                <DialogTitle>Upload New Document</DialogTitle>
-                <DialogDescription>Select the document type and file to upload.</DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                <div>
-                    <Label htmlFor="document-type">Document Type</Label>
-                    <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
-                    <SelectTrigger>
-                        <SelectValue placeholder="Select document type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        {documentTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id.toString()}>
-                            {type.name}
-                        </SelectItem>
-                        ))}
-                    </SelectContent>
-                    </Select>
-                </div>
-                <div>
-                    <Label htmlFor="file">File</Label>
-                    <Input
-                    id="file"
-                    type="file"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                    />
-                </div>
-                <div>
-                    <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
-                    <Input
-                    id="expiry-date"
-                    type="date"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                    />
-                </div>
-                </div>
-                <DialogFooter>
-                <Button variant="outline" onClick={() => setIsUploadOpen(false)}>
-                    Cancel
-                </Button>
-                <Button onClick={handleUpload} disabled={!selectedFile || !selectedDocumentType || isUploading}>
-                    {isUploading ? "Uploading..." : "Upload"}
-                </Button>
-                </DialogFooter>
-            </DialogContent>
+             <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+                <DialogTrigger asChild>
+                    <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Upload Document
+                    </Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                    <DialogTitle>Upload New Document</DialogTitle>
+                    <DialogDescription>Select the document type and file to upload.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                    <div>
+                        <Label htmlFor="document-type">Document Type</Label>
+                        <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select document type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {documentTypes.map((type) => (
+                            <SelectItem key={type.id} value={type.id.toString()}>
+                                {type.name}
+                            </SelectItem>
+                            ))}
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <Label htmlFor="file">File</Label>
+                        <Input
+                        id="file"
+                        type="file"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+                        <Input
+                        id="expiry-date"
+                        type="date"
+                        value={expiryDate}
+                        onChange={(e) => setExpiryDate(e.target.value)}
+                        />
+                    </div>
+                    </div>
+                    <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsUploadOpen(false)}>
+                        Cancel
+                    </Button>
+                    <Button onClick={handleUpload} disabled={!selectedFile || !selectedDocumentType || isUploading}>
+                        {isUploading ? "Uploading..." : "Upload"}
+                    </Button>
+                    </DialogFooter>
+                </DialogContent>
             </Dialog>
+        </div>
+
+        {missingDocs.length > 0 && (
+            <Card className="border-red-500 bg-red-50">
+                <CardHeader>
+                    <CardTitle className="text-red-700 flex items-center gap-2"><FileWarning />Action Required</CardTitle>
+                    <CardDescription className="text-red-600">You have documents that are required but have not been uploaded yet.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ul className="list-disc list-inside space-y-1 text-black">
+                        {missingDocs.map(doc => <li key={doc.id}>{doc.name}</li>)}
+                    </ul>
+                </CardContent>
+            </Card>
+        )}
+
+        {expiringSoonDocs.length > 0 && (
+            <Card className="border-orange-500 bg-orange-50">
+                <CardHeader>
+                    <CardTitle className="text-orange-700 flex items-center gap-2"><AlertTriangle />Expiring Soon</CardTitle>
+                    <CardDescription className="text-orange-600">The following documents will expire within the next 30 days.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table className="text-black">
+                        <TableHeader ><TableRow><TableHead className="text-black">Document</TableHead><TableHead className="text-black">Expires On</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {expiringSoonDocs.map(doc => (
+                                <TableRow key={doc.id}>
+                                    <TableCell>{doc.document_name}</TableCell>
+                                    <TableCell className="font-medium">{new Date(doc.expiry_date!).toLocaleDateString()}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Uploaded Documents</CardTitle>
+          <CardDescription>A list of all your uploaded documents.</CardDescription>
         </CardHeader>
         <CardContent>
             {isLoading ? <p>Loading documents...</p> : 
@@ -180,7 +230,7 @@ export function MyDocumentsPage() {
                     <TableHead>Uploaded On</TableHead>
                     <TableHead>Expiry Date</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -192,12 +242,10 @@ export function MyDocumentsPage() {
                         {doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : "N/A"}
                     </TableCell>
                     <TableCell>{getStatusBadge(doc.expiry_date)}</TableCell>
-                    <TableCell>
-                        <div className="flex items-center space-x-2">
+                    <TableCell className="text-right">
                         <Button variant="ghost" size="sm" asChild>
                             <a href={doc.upload_link} target="_blank" rel="noopener noreferrer"><Download className="h-4 w-4" /></a>
                         </Button>
-                        </div>
                     </TableCell>
                     </TableRow>
                 ))}
@@ -205,6 +253,7 @@ export function MyDocumentsPage() {
             </Table>
             }
         </CardContent>
-    </Card>
+      </Card>
+    </div>
   )
 }

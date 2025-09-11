@@ -76,11 +76,15 @@ export const API_CONFIG = {
     LOAN_APPROVALS: "/loans/all",
     MY_LOANS: "/loans/my-loans",
     REPAYMENTS: "/loans/repayments",
+    // ADD_REPAYMENTS: ""
 
 
     // Expenses
     EXPENSES: "/expense",
     EXPENSE_APPROVALS: "/expense",
+
+    // Summary 
+    SUMMARY_EXPENSES : "/summary/expenses"
   },
 }
 

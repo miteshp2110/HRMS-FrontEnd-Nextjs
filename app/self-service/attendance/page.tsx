@@ -1,5 +1,12 @@
-import { MyAttendancePage } from "@/components/self-service/my-attendance-page"
+"use client"
+
+import { MainLayout } from "@/components/main-layout";
+import { MyAttendancePage } from "@/components/self-service/my-attendance-page";
 
 export default function MyAttendancePageRoute() {
-  return <MyAttendancePage />
+  return (
+    <MainLayout>
+      <MyAttendancePage />
+    </MainLayout>
+  );
 }

@@ -478,6 +478,12 @@ const navigationItems: NavItem[] = [
       {
         title: "Attendance Records",
         href: "/management/attendance",
+        icon: FileText,
+        permission: "user.manage",
+      },
+      {
+        title: "Documents Management",
+        href: "/management/documents",
         icon: ClipboardList,
         permission: "attendance.manage",
       },
@@ -512,6 +518,13 @@ const navigationItems: NavItem[] = [
         icon: Calculator,
         permission: "payroll.manage",
       },
+      {
+        title: "Salary Structures",
+        href: "/payroll/structure",
+        icon: DollarSign, // Or another icon you prefer
+        permission: "payroll.manage",
+      },
+
       {
         title: "Payroll Runs",
         href: "/payroll/runs",

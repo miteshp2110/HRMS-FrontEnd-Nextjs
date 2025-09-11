@@ -119,10 +119,16 @@ const PunchInDialog = ({ open, onOpenChange, onPunchInSuccess }: { open: boolean
                         <Label>Employee</Label>
                         <Popover open={isEmployeePopoverOpen} onOpenChange={setIsEmployeePopoverOpen}>
                             <PopoverTrigger asChild>
-                                <button  aria-expanded={isEmployeePopoverOpen} className="w-full justify-between">
-                                    {selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "Select employee..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </button>
+                                <button
+                                                  type="button"
+                                                  role="button"
+                                                  className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                                >
+                                                  {selectedUser
+                                                    ? `${selectedUser.first_name} ${selectedUser.last_name}`
+                                                    : "Select employee..."}
+                                                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>

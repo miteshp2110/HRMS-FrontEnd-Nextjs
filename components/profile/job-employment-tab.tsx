@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Users as UsersIcon } from "lucide-react"
 import type { DetailedUserProfile, Role, Job, UserProfile } from "@/lib/api"
-import { getRoles, getJobs, searchUsers, getDirectReports } from "@/lib/api"
+import { getRoles, getJobs, searchUsers, getDirectReports, searchUsersByPermissions } from "@/lib/api"
 
 interface JobEmploymentTabProps {
   profile: DetailedUserProfile
@@ -40,7 +40,8 @@ export function JobEmploymentTab({ profile, isEditing, onSave, onCancel }: JobEm
             const [rolesData, jobsData, managersData] = await Promise.all([
                 getRoles(),
                 getJobs(),
-                searchUsers("") // Fetch all users to act as potential managers
+                // searchUsers("") // Fetch all users to act as potential managers
+                searchUsersByPermissions(["leaves.approve","attendance.view"])
             ]);
             setRoles(rolesData);
             setJobs(jobsData);

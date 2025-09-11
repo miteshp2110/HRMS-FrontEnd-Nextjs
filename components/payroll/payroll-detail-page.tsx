@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
+import { MainLayout } from "@/components/main-layout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -12,14 +12,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Edit, Plus, Trash2, Download } from "lucide-react"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
+import { ArrowLeft, Edit, Plus, Trash2, Download, AlertCircle } from "lucide-react"
 import {
   type PayrollRun,
   type Payslip,
@@ -30,9 +30,12 @@ import {
   updatePayslipDetail,
   addPayslipDetail,
   deletePayslipDetail,
+  getPayrollComponents,
+  type PayrollComponent,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { useAuth } from "@/lib/auth-context"
 
 interface PayrollDetailPageProps {
   payrollId: string
@@ -43,50 +46,52 @@ export function PayrollDetailPage({ payrollId }: PayrollDetailPageProps) {
   const [payslips, setPayslips] = useState<Payslip[]>([])
   const [selectedPayslip, setSelectedPayslip] = useState<Payslip | null>(null)
   const [payslipDetails, setPayslipDetails] = useState<PayslipDetail[]>([])
+  const [payrollComponents, setPayrollComponents] = useState<PayrollComponent[]>([])
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingDetail, setEditingDetail] = useState<PayslipDetail | null>(null)
-  const [formData, setFormData] = useState({
-    component_name: "",
-    component_type: "earning" as "earning" | "deduction",
-    amount: 0,
-  })
+  const [formData, setFormData] = useState({ component_name: "", component_type: "earning" as "earning" | "deduction", amount: 0 })
   const { toast } = useToast()
-  const router = useRouter()
+  const { hasPermission } = useAuth()
 
-  useEffect(() => {
-    loadPayrollData()
-  }, [payrollId])
+  const canManagePayroll = hasPermission("payroll.manage");
 
   const loadPayrollData = async () => {
+    if (!canManagePayroll) { setLoading(false); return; }
     try {
       setLoading(true)
-      const [runs, slips] = await Promise.all([getPayrollRuns(), getPayslips(Number.parseInt(payrollId))])
+      const [runs, slips, components] = await Promise.all([
+          getPayrollRuns(), 
+          getPayslips(Number.parseInt(payrollId)),
+          getPayrollComponents()
+      ]);
 
       const currentRun = runs.find((run) => run.id === Number.parseInt(payrollId))
       setPayrollRun(currentRun || null)
       setPayslips(slips)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load payroll data",
-        variant: "destructive",
-      })
+      setPayrollComponents(components);
+
+      if (slips.length > 0 && !selectedPayslip) {
+          handlePayslipSelect(slips[0]);
+      }
+
+    } catch (error: any) {
+      toast({ title: "Error", description: `Failed to load payroll data: ${error.message}`, variant: "destructive" })
     } finally {
       setLoading(false)
     }
   }
+  
+  useEffect(() => {
+    loadPayrollData()
+  }, [payrollId, canManagePayroll])
 
   const loadPayslipDetails = async (payslipId: number) => {
     try {
       const details = await getPayslipDetails(payslipId)
       setPayslipDetails(details)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load payslip details",
-        variant: "destructive",
-      })
+    } catch (error: any) {
+      toast({ title: "Error", description: `Failed to load payslip details: ${error.message}`, variant: "destructive" })
     }
   }
 
@@ -109,277 +114,133 @@ export function PayrollDetailPage({ payrollId }: PayrollDetailPageProps) {
       }
       setDialogOpen(false)
       setEditingDetail(null)
-      setFormData({ component_name: "", component_type: "earning", amount: 0 })
       loadPayslipDetails(selectedPayslip.id)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save payslip component",
-        variant: "destructive",
-      })
+      loadPayrollData();
+    } catch (error: any) {
+      toast({ title: "Error", description: `Failed to save component: ${error.message}`, variant: "destructive" })
     }
   }
 
   const handleEdit = (detail: PayslipDetail) => {
     setEditingDetail(detail)
-    setFormData({
-      component_name: detail.component_name,
-      component_type: detail.component_type,
-      amount: detail.amount,
-    })
+    setFormData({ component_name: detail.component_name, component_type: detail.component_type, amount: detail.amount })
     setDialogOpen(true)
+  }
+  
+  const handleCreate = () => {
+      setEditingDetail(null);
+      setFormData({ component_name: "", component_type: "earning", amount: 0 });
+      setDialogOpen(true);
   }
 
   const handleDelete = async (detailId: number) => {
     if (!selectedPayslip || !confirm("Are you sure you want to delete this component?")) return
-
     try {
       await deletePayslipDetail(selectedPayslip.id, detailId)
       toast({ title: "Success", description: "Payslip component deleted successfully" })
       loadPayslipDetails(selectedPayslip.id)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete payslip component",
-        variant: "destructive",
-      })
+      loadPayrollData();
+    } catch (error: any) {
+      toast({ title: "Error", description: `Failed to delete component: ${error.message}`, variant: "destructive" })
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
+  const formatCurrency = (amount: string | number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(amount));
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "draft":
-        return <Badge variant="secondary">Draft</Badge>
-      case "finalized":
-        return <Badge variant="default">Finalized</Badge>
-      case "paid":
-        return (
-          <Badge variant="outline" className="border-green-500 text-green-600">
-            Paid
-          </Badge>
-        )
-      default:
-        return <Badge variant="secondary">{status}</Badge>
-    }
-  }
-
-  if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>
-  }
-
-  if (!payrollRun) {
-    return <div className="flex items-center justify-center h-64">Payroll run not found</div>
-  }
+  if (!canManagePayroll) { return <MainLayout><Alert variant="destructive">...</Alert></MainLayout>; }
+  if (loading) { return <MainLayout><p>Loading...</p></MainLayout>; }
+  if (!payrollRun) { return <MainLayout><p>Payroll run not found.</p></MainLayout> }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back
-        </Button>
+        <Button variant="outline" asChild><Link href="/payroll/runs"><ArrowLeft className="h-4 w-4 mr-2" />Back to Runs</Link></Button>
         <div>
-          <h1 className="text-3xl font-bold">
-            Payroll Run - {new Date(payrollRun.from_date).toLocaleDateString()} to{" "}
-            {new Date(payrollRun.to_date).toLocaleDateString()}
-          </h1>
-          <p className="text-muted-foreground">
-            {payrollRun.total_employees} employees • {formatCurrency(payrollRun.total_amount)} total
-          </p>
+          <h1 className="text-2xl font-bold">Payroll Run Details</h1>
+          <p className="text-muted-foreground">{new Date(payrollRun.pay_period_start).toLocaleDateString()} to {new Date(payrollRun.pay_period_end).toLocaleDateString()}</p>
         </div>
-        {getStatusBadge(payrollRun.status)}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Payslips List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Employee Payslips</CardTitle>
-            <CardDescription>Select an employee to view payslip details</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-1">
+          <Card><CardHeader><CardTitle>Employee Payslips</CardTitle><CardDescription>{payslips.length} employees</CardDescription></CardHeader>
+            <CardContent className="max-h-[60vh] overflow-y-auto">
               {payslips.map((payslip) => (
-                <div
-                  key={payslip.id}
-                  className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                    selectedPayslip?.id === payslip.id ? "bg-primary/10 border-primary" : "hover:bg-muted"
-                  }`}
-                  onClick={() => handlePayslipSelect(payslip)}
-                >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">{payslip.employee_name}</p>
-                      <p className="text-sm text-muted-foreground">Net Pay: {formatCurrency(payslip.net_pay)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Gross: {formatCurrency(payslip.gross_earnings)}</p>
-                      <p className="text-sm text-muted-foreground">
-                        Deductions: {formatCurrency(payslip.total_deductions)}
-                      </p>
-                    </div>
-                  </div>
+                <div key={payslip.id} className={`p-3 border rounded-lg cursor-pointer transition-colors mb-2 ${selectedPayslip?.id === payslip.id ? "bg-primary/10 border-primary" : "hover:bg-muted"}`} onClick={() => handlePayslipSelect(payslip)}>
+                  <div className="flex justify-between items-center"><p className="font-medium">{payslip.employee_name}</p><p className="text-sm font-bold">{formatCurrency(payslip.net_pay)}</p></div>
                 </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Payslip Details */}
-        <Card>
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>
-                  {selectedPayslip ? `${selectedPayslip.employee_name}'s Payslip` : "Select Employee"}
-                </CardTitle>
-                <CardDescription>
-                  {selectedPayslip ? "Detailed breakdown of salary components" : "Choose an employee to view details"}
-                </CardDescription>
-              </div>
-              {selectedPayslip && payrollRun.status === "draft" && (
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setEditingDetail(null)
-                        setFormData({ component_name: "", component_type: "earning", amount: 0 })
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Component
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingDetail ? "Edit Component" : "Add New Component"}</DialogTitle>
-                      <DialogDescription>
-                        {editingDetail ? "Update the component details" : "Add a new salary component"}
-                      </DialogDescription>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit}>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="component_name">Component Name</Label>
-                          <Input
-                            id="component_name"
-                            value={formData.component_name}
-                            onChange={(e) => setFormData({ ...formData, component_name: e.target.value })}
-                            placeholder="e.g., Overtime, Bonus"
-                            required
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="component_type">Component Type</Label>
-                          <Select
-                            value={formData.component_type}
-                            onValueChange={(value: "earning" | "deduction") =>
-                              setFormData({ ...formData, component_type: value })
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="earning">Earning</SelectItem>
-                              <SelectItem value="deduction">Deduction</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="amount">Amount</Label>
-                          <Input
-                            id="amount"
-                            type="number"
-                            step="0.01"
-                            value={formData.amount}
-                            onChange={(e) =>
-                              setFormData({ ...formData, amount: Number.parseFloat(e.target.value) || 0 })
-                            }
-                            placeholder="0.00"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button type="submit">{editingDetail ? "Update" : "Add"}</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            {selectedPayslip ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-3 bg-muted rounded-lg">
-                  <span className="font-medium">Net Pay</span>
-                  <span className="text-lg font-bold">{formatCurrency(selectedPayslip.net_pay)}</span>
+            </CardContent>
+          </Card>
+        </div>
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <div>
+                  <CardTitle>{selectedPayslip ? `${selectedPayslip.employee_name}'s Payslip` : "Select an Employee"}</CardTitle>
+                  <CardDescription>{selectedPayslip ? "Detailed breakdown of salary components" : "Choose an employee to view details"}</CardDescription>
                 </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Component</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      {payrollRun.status === "draft" && <TableHead className="text-right">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {payslipDetails.map((detail) => (
-                      <TableRow key={detail.id}>
-                        <TableCell className="font-medium">{detail.component_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={detail.component_type === "earning" ? "default" : "destructive"}>
-                            {detail.component_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">{formatCurrency(detail.amount)}</TableCell>
-                        {payrollRun.status === "draft" && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handleEdit(detail)}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDelete(detail.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                <div className="flex justify-end">
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Payslip
-                  </Button>
+                {selectedPayslip && payrollRun.status === "processing" && <Button size="sm" onClick={handleCreate}><Plus className="h-4 w-4 mr-2" />Add Component</Button>}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {selectedPayslip ? (
+                <div className="space-y-4">
+                  <Table>
+                    <TableHeader><TableRow><TableHead>Component</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead>{payrollRun.status === "processing" && <TableHead className="text-right">Actions</TableHead>}</TableRow></TableHeader>
+                    <TableBody>
+                      {payslipDetails.map((detail) => (
+                        <TableRow key={detail.id}>
+                          <TableCell className="font-medium">{detail.component_name}</TableCell>
+                          <TableCell><Badge variant={detail.component_type === "earning" ? "default" : "destructive"}>{detail.component_type}</Badge></TableCell>
+                          <TableCell className="text-right">{formatCurrency(detail.amount)}</TableCell>
+                          {payrollRun.status === "processing" && (
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(detail)}><Edit className="h-4 w-4" /></Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleDelete(detail.id)}><Trash2 className="h-4 w-4" /></Button>
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-32 text-muted-foreground">
-                Select an employee from the list to view payslip details
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              ) : <div className="text-center py-12 text-muted-foreground">Select an employee from the list.</div>}
+            </CardContent>
+          </Card>
+        </div>
       </div>
+       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{editingDetail ? "Edit Component" : "Add New Component"}</DialogTitle>
+                    <DialogDescription>{editingDetail ? "Update the component details" : "Add a new salary component"}</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                    <div className="grid gap-2">
+                    <Label htmlFor="component_name">Component Name</Label>
+                    <Input id="component_name" value={formData.component_name} onChange={(e) => setFormData({ ...formData, component_name: e.target.value })} placeholder="e.g., Overtime, Bonus" required />
+                    </div>
+                    <div className="grid gap-2">
+                    <Label htmlFor="component_type">Component Type</Label>
+                    <Select value={formData.component_type} onValueChange={(value: "earning" | "deduction") => setFormData({ ...formData, component_type: value })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="earning">Earning</SelectItem><SelectItem value="deduction">Deduction</SelectItem></SelectContent>
+                    </Select>
+                    </div>
+                    <div className="grid gap-2">
+                    <Label htmlFor="amount">Amount</Label>
+                    <Input id="amount" type="number" step="0.01" value={formData.amount} onChange={(e) => setFormData({ ...formData, amount: Number.parseFloat(e.target.value) || 0 })} placeholder="0.00" required />
+                    </div>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">{editingDetail ? "Update" : "Add"}</Button>
+                </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
     </div>
   )
 }

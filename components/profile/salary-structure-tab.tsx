@@ -155,8 +155,10 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
 
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Summary Cards */}
-      </div>
+              <Card><CardHeader><CardTitle className="text-sm font-medium">Total Earnings</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-green-600">{formatCurrency(totalEarnings)}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-sm font-medium">Total Deductions</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-red-600">{formatCurrency(totalDeductions)}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle className="text-sm font-medium">Net Salary</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-blue-600">{formatCurrency(netSalary)}</p></CardContent></Card>
+            </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>

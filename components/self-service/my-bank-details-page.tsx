@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Building, CreditCard, Hash, Save, Edit } from "lucide-react"
+import { Building, CreditCard, Hash, Save, Edit, Wallet } from "lucide-react"
 import { getMyBankDetails, updateMyBankDetails, type BankDetails } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -29,15 +29,17 @@ export function MyBankDetailsPage() {
       setLoading(true);
       const data = await getMyBankDetails()
       setBankDetails(data)
-      setFormData({
-        bank_name: data.bank_name,
-        bank_account: data.bank_account,
-        bank_ifsc: data.bank_ifsc,
-      })
-      setIsEditing(false); // If details exist, start in view mode
+      if (data) {
+        setFormData({
+          bank_name: data.bank_name,
+          bank_account: data.bank_account,
+          bank_ifsc: data.bank_ifsc,
+        })
+      }
+      setIsEditing(!data); // If no details exist, start in edit mode
     } catch (error) {
       console.error("Failed to load bank details:", error)
-      setIsEditing(true); // If no details exist, start in edit mode
+      setIsEditing(true); // If there's an error (like 404), go to edit mode
     } finally {
       setLoading(false)
     }
@@ -47,23 +49,18 @@ export function MyBankDetailsPage() {
     loadBankDetails()
   }, [])
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
     try {
       await updateMyBankDetails(formData)
-
       toast({
         title: "Success",
         description: "Bank details updated successfully",
       })
-
       setIsEditing(false)
       loadBankDetails()
     } catch (error: any) {
-      console.error("Failed to update bank details:", error)
       toast({
         title: "Error",
         description: error.message || "Failed to update bank details",
@@ -82,9 +79,6 @@ export function MyBankDetailsPage() {
         bank_ifsc: bankDetails.bank_ifsc,
       })
       setIsEditing(false);
-    } else {
-        // If there were no details to begin with, just clear the form
-        setFormData({ bank_name: "", bank_account: "", bank_ifsc: "" });
     }
   }
 
@@ -102,7 +96,7 @@ export function MyBankDetailsPage() {
       <div className="flex justify-between items-center">
         <div>
             <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
+                <Wallet className="h-5 w-5" />
                 Banking Information
             </CardTitle>
             <CardDescription>Your bank account for salary and reimbursement.</CardDescription>
@@ -120,10 +114,7 @@ export function MyBankDetailsPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label htmlFor="bank_name" className="flex items-center gap-2">
-                <Building className="h-4 w-4" />
-                Bank Name
-              </Label>
+              <Label htmlFor="bank_name">Bank Name</Label>
               <Input
                 id="bank_name"
                 value={formData.bank_name}
@@ -134,10 +125,7 @@ export function MyBankDetailsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bank_account" className="flex items-center gap-2">
-                <Hash className="h-4 w-4" />
-                Account Number
-              </Label>
+              <Label htmlFor="bank_account">Account Number</Label>
               <Input
                 id="bank_account"
                 value={formData.bank_account}
@@ -148,10 +136,7 @@ export function MyBankDetailsPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bank_ifsc" className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                IFSC Code
-              </Label>
+              <Label htmlFor="bank_ifsc">IFSC Code</Label>
               <Input
                 id="bank_ifsc"
                 value={formData.bank_ifsc}
@@ -165,9 +150,7 @@ export function MyBankDetailsPage() {
           <Separator />
 
           <div className="flex justify-end space-x-2">
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
+            {bankDetails && <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>}
             <Button type="submit" disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-2" />
               {isSubmitting ? "Saving..." : "Save Details"}
@@ -178,41 +161,22 @@ export function MyBankDetailsPage() {
         <div className="space-y-6">
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <Building className="h-4 w-4" />
-                Bank Name
-              </Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="font-medium">{bankDetails.bank_name}</p>
-              </div>
+              <Label className="text-sm font-medium">Bank Name</Label>
+              <div className="p-3 bg-muted rounded-md"><p className="font-medium">{bankDetails.bank_name}</p></div>
             </div>
-
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <Hash className="h-4 w-4" />
-                Account Number
-              </Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="font-mono">{bankDetails.bank_account.replace(/(.{4})/g, "$1 ").trim()}</p>
-              </div>
+              <Label className="text-sm font-medium">Account Number</Label>
+              <div className="p-3 bg-muted rounded-md"><p className="font-mono">{bankDetails.bank_account.replace(/(.{4})/g, "$1 ").trim()}</p></div>
             </div>
-
             <div className="space-y-2">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <CreditCard className="h-4 w-4" />
-                IFSC Code
-              </Label>
-              <div className="p-3 bg-muted rounded-md">
-                <p className="font-mono">{bankDetails.bank_ifsc}</p>
-              </div>
+              <Label className="text-sm font-medium">IFSC Code</Label>
+              <div className="p-3 bg-muted rounded-md"><p className="font-mono">{bankDetails.bank_ifsc}</p></div>
             </div>
           </div>
         </div>
       ) : (
-        <div className="text-center py-8">
-          <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No Bank Details Found</h3>
-          <p className="text-muted-foreground mb-4">Add your bank account information to receive salary payments.</p>
+         <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">No bank details found. Please add your account information.</p>
         </div>
       )}
     </CardContent>

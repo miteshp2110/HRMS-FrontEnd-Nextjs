@@ -122,6 +122,8 @@ export interface SalaryComponent {
   value_type: "fixed" | "percentage"
   value: string
   based_on_component_name?: string
+  based_on_component_id: number
+  component_id: number
   calculated_amount: number
 }
 
@@ -129,14 +131,21 @@ export interface LoanRecord {
   id: number
   loan_type: "loan" | "advance"
   title: string
-  description?: string
-  principal_amount: number
+  description?: string | null
+  principal_amount: string
   total_installments: number
   remaining_installments:number
-  status: "pending" | "approved" | "rejected" | "completed"
-  disbursement_date?: string
+  status: "pending_approval" | "active" | "rejected" | "paid_off" | "approved"
+  request_date : string
+  employee_name : string
+  employee_id : number
+  approved_by : number | null
+  approved_by_name : string | null
+  approval_date : string | null
+  disbursement_date?: string | null
   created_at: string
   updated_at: string
+  emi_amount : string
 }
 
 export interface PaginatedResponse<T> {
@@ -185,6 +194,12 @@ export interface Skill {
   skill_description: string
 }
 
+export interface ExpenseSummary{
+  id: number
+  employee_name : string
+  total_amount : string
+}
+
 export interface DocumentType {
   id: number
   name: string
@@ -205,12 +220,14 @@ export interface PayrollComponent {
 
 export interface PayrollRun {
   id: number
-  from_date: string
-  to_date: string
-  status: "draft" | "finalized" | "paid"
+  pay_period_start: string
+  pay_period_end: string
+  status: "processing" | "paid"
+  total_net_pay : string
   created_at: string
-  total_employees: number
-  total_amount: number
+  initiated_by:number
+  initiated_by_name:string
+  finalized_at:string
 }
 
 export interface Payslip {
@@ -218,10 +235,11 @@ export interface Payslip {
   payroll_id: number
   employee_id: number
   employee_name: string
-  gross_earnings: number
-  total_deductions: number
-  net_pay: number
-  status: "draft" | "finalized" | "paid"
+  gross_earnings: string
+  total_deductions: string
+  net_pay: string
+  pay_period_start: string
+  pay_period_end:string
 }
 
 export interface PayslipDetail {
@@ -230,6 +248,7 @@ export interface PayslipDetail {
   component_name: string
   component_type: "earning" | "deduction"
   amount: number
+  payroll_status : "paid"|"processing"
 }
 
 // New interfaces for missing functionality
@@ -305,6 +324,9 @@ export interface ExpenseRecord {
   expense: number
   expense_description: string
   created_at: string
+  first_name : string
+  last_name : string
+  employee_id : number
 }
 
 export interface LeaveType {
@@ -789,7 +811,7 @@ export async function uploadEmployeeDocument(
   employeeId: number,
   formData: FormData,
 ): Promise<{ success: boolean; message: string; document: { id: number; link: string } }> {
-    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.USERS}/${employeeId}/documents`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.DOCUMENTS}/employee/${employeeId}`, {
         method: 'POST',
         headers: {
             Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
@@ -1167,7 +1189,7 @@ export async function getMyLoans(): Promise<LoanRecord[]> {
 }
 
 export async function getAllLoans(status?: string): Promise<LoanRecord[]> {
-  return apiRequest<LoanRecord[]>(`${API_CONFIG.ENDPOINTS.LOANS}`)
+  return apiRequest<LoanRecord[]>(`${API_CONFIG.ENDPOINTS.LOAN_APPROVALS}`)
 }
 
 export async function approveLoan(
@@ -1183,7 +1205,14 @@ export async function approveLoan(
     body: JSON.stringify(body),
   })
 }
+// Add this new function to your existing lib/api.ts file
 
+export async function addRepayment(loanId: number, amount: number): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`${API_CONFIG.ENDPOINTS.LOANS}/${loanId}/repay`, {
+    method: "POST",
+    body: JSON.stringify({ amount }),
+  });
+}
 export async function getApprovedLoans(): Promise<LoanRecord[]> {
   return apiRequest<LoanRecord[]>(`${API_CONFIG.ENDPOINTS.LOANS}/approved`)
 }
@@ -1230,3 +1259,17 @@ export async function removeSalaryComponent(employeeId: number, componentId: num
     method: "DELETE",
   })
 }
+
+export async function updateSalaryComponent(employeeId: number, componentId: number,data:Partial<SalaryComponent>): Promise<{ success: boolean; message: string }> {
+  return await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data)
+  })
+}
+
+export async function getExpensesSummary(): Promise<ExpenseSummary[]> {
+  return await apiRequest(`${API_CONFIG.ENDPOINTS.SUMMARY_EXPENSES}`, {
+    method: "GET",
+  })
+}
+

@@ -1,73 +1,119 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Calendar, CheckCircle, XCircle, Clock } from "lucide-react"
-import { type LeaveBalance, type LeaveRecord, getLeaveBalances, getMyLeaveRecords } from "@/lib/api"
+import { type LeaveBalance, type LeaveRecord, getLeaveBalances, getMyLeaveRecords, requestLeave, getLeaveTypes, type LeaveType } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
 export function MyLeavesPage() {
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([])
-  const [allLeaveApplications, setAllLeaveApplications] = useState<LeaveRecord[]>([])
+  const [leaveApplications, setLeaveApplications] = useState<LeaveRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [formData, setFormData] = useState({
+    leave_type: "", // This will store the leave type ID
+    from_date: "",
+    to_date: "",
+    reason: "",
+  })
   const { toast } = useToast()
 
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  // Set initial date range to the current month
-  useEffect(() => {
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    setStartDate(firstDayOfMonth.toISOString().split('T')[0]);
-    setEndDate(today.toISOString().split('T')[0]);
-  }, []);
-
-  useEffect(() => {
-    const loadLeaveData = async () => {
+  const loadLeaveData = async () => {
+    try {
       setLoading(true)
-      try {
-        const [balances, applications] = await Promise.all([
-            getLeaveBalances(),
-            getMyLeaveRecords(),
-        ]);
-        setLeaveBalances(balances)
-        setAllLeaveApplications(applications as LeaveRecord[] | [])
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to load leave data",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
+      const [balances, applications] = await Promise.all([
+          getLeaveBalances(),
+          getMyLeaveRecords(),
+      ]);
+      setLeaveBalances(balances)
+      setLeaveApplications(applications as LeaveRecord[] | [])
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load leave data",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadLeaveData()
-  }, [toast])
+  }, [])
 
-  const filteredLeaveApplications = useMemo(() => {
-    if (!startDate || !endDate) {
-      return allLeaveApplications;
-    }
-    const start = new Date(startDate);
-    const end = new Date(endDate);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
     
-    return allLeaveApplications.filter(app => {
-        const appDate = new Date(app.from_date);
-        return appDate >= start && appDate <= end;
-    });
-  }, [allLeaveApplications, startDate, endDate]);
+    if (!formData.leave_type || !formData.from_date || !formData.to_date) {
+        toast({ title: "Error", description: "Please fill out all date and type fields.", variant: "destructive" });
+        return;
+    }
 
+    const fromDate = new Date(formData.from_date);
+    const toDate = new Date(formData.to_date);
+
+    if (toDate < fromDate) {
+        toast({ title: "Error", description: "'To Date' cannot be before 'From Date'.", variant: "destructive" });
+        return;
+    }
+
+    const timeDiff = toDate.getTime() - fromDate.getTime()
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24)) + 1
+
+    const selectedLeaveTypeId = parseInt(formData.leave_type);
+    const selectedLeaveBalance = leaveBalances.find(b => b.id === selectedLeaveTypeId);
+
+    if (!selectedLeaveBalance || daysDiff > selectedLeaveBalance.balance) {
+        toast({
+            title: "Insufficient Balance",
+            description: `You only have ${selectedLeaveBalance?.balance || 0} days of ${selectedLeaveBalance?.leave_type_name || ''} available for a ${daysDiff}-day request.`,
+            variant: "destructive"
+        });
+        return;
+    }
+
+    try {
+      await requestLeave({
+          leave_type: selectedLeaveTypeId,
+          from_date: formData.from_date,
+          to_date: formData.to_date,
+          leave_description: formData.reason,
+      })
+
+      toast({ title: "Success", description: "Leave application submitted successfully" })
+      setDialogOpen(false)
+      setFormData({ leave_type: "", from_date: "", to_date: "", reason: "" })
+      loadLeaveData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit leave application",
+        variant: "destructive",
+      })
+    }
+  }
 
   const getStatusFromRecord = (record: LeaveRecord): "approved" | "rejected" | "pending" => {
-    if (record.primary_status == false || record.secondry_status == false) return "rejected";
+    if (record.rejection_reason != null) return "rejected";
     if (record.primary_status == true && record.secondry_status == true) return "approved";
     return "pending";
   }
@@ -91,6 +137,7 @@ export function MyLeavesPage() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
   }
 
+
   if (loading) {
     return <div className="flex items-center justify-center h-64">Loading...</div>
   }
@@ -102,10 +149,80 @@ export function MyLeavesPage() {
           <h1 className="text-3xl font-bold">My Leaves</h1>
           <p className="text-muted-foreground">Manage your leave applications and view balances</p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Apply for Leave
-        </Button>
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <Button >
+              <Plus className="h-4 w-4 mr-2" />
+              Apply for Leave
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Apply for Leave</DialogTitle>
+              <DialogDescription>Submit a new leave application</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleSubmit}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="leave_type">Leave Type</Label>
+                  <Select
+                    value={formData.leave_type}
+                    onValueChange={(value) => setFormData({ ...formData, leave_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select leave type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {leaveBalances.map((balance) => (
+                        <SelectItem key={balance.id} value={balance.id.toString()}>
+                          {balance.leave_type_name} ({balance.balance} days available)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="from_date">From Date</Label>
+                    <Input
+                      id="from_date"
+                      type="date"
+                      value={formData.from_date}
+                      onChange={(e) => setFormData({ ...formData, from_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="to_date">To Date</Label>
+                    <Input
+                      id="to_date"
+                      type="date"
+                      value={formData.to_date}
+                      onChange={(e) => setFormData({ ...formData, to_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="reason">Reason</Label>
+                  <Textarea
+                    id="reason"
+                    value={formData.reason}
+                    onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                    placeholder="Please provide a reason for your leave"
+                    required
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Submit Application</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -123,20 +240,19 @@ export function MyLeavesPage() {
         ))}
       </div>
 
-      <Card>
+      {
+        leaveApplications.length===0?
+        <Card>
         <CardHeader>
-          <CardTitle>Leave Application History</CardTitle>
-          <CardDescription>Your leave application history and status.</CardDescription>
-           <div className="flex flex-col md:flex-row gap-4 pt-4">
-                <div className="grid gap-2 w-full">
-                    <Label htmlFor="start-date">From Date</Label>
-                    <Input id="start-date" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                </div>
-                <div className="grid gap-2 w-full">
-                    <Label htmlFor="end-date">To Date</Label>
-                    <Input id="end-date" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                </div>
-            </div>
+          <CardTitle>No Leave Application Found</CardTitle>
+          <CardDescription>No leaves applications in your profile</CardDescription>
+        </CardHeader>
+        </Card>
+        :
+        <Card>
+        <CardHeader>
+          <CardTitle>Leave Applications</CardTitle>
+          <CardDescription>Your leave application history and status</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -151,7 +267,7 @@ export function MyLeavesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredLeaveApplications.map((application) => (
+              {leaveApplications.map((application) => (
                 <TableRow key={application.id}>
                   <TableCell className="font-medium">{application.leave_type_name}</TableCell>
                   <TableCell>{new Date(application.from_date).toLocaleDateString()} - {new Date(application.to_date).toLocaleDateString()}</TableCell>
@@ -165,6 +281,7 @@ export function MyLeavesPage() {
           </Table>
         </CardContent>
       </Card>
+      }
     </div>
   )
 }

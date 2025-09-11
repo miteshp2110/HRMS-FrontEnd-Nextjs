@@ -1,185 +1,120 @@
+
 "use client"
 
-import { useState, useEffect } from "react"
+import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { Download, DollarSign, TrendingUp, TrendingDown } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { DollarSign, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
-import { type SalaryComponent, getMySalaryStructure } from "@/lib/api"
+import { getMySalaryStructure, type SalaryComponent } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
 export function MySalaryPage() {
-  const [salaryStructure, setSalaryStructure] = useState<SalaryComponent[]>([])
-  const [loading, setLoading] = useState(true)
+  const [structure, setStructure] = React.useState<SalaryComponent[]>([])
+  const [isLoading, setIsLoading] = React.useState(true)
   const { toast } = useToast()
 
-  useEffect(() => {
-    loadSalaryData()
-  }, [])
-
-  const loadSalaryData = async () => {
-    try {
-      setLoading(true)
-      // Using current user's ID (1) for demo
-      const data = await getMySalaryStructure()
-      setSalaryStructure(data)
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load salary data",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
+  React.useEffect(() => {
+    const fetchStructure = async () => {
+      try {
+        setIsLoading(true)
+        const data = await getMySalaryStructure()
+        setStructure(data)
+      } catch (error: any) {
+        toast({ title: "Error", description: `Could not load your salary structure: ${error.message}`, variant: "destructive"})
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }
+    fetchStructure()
+  }, [toast])
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount)
-  }
+  const { totalEarnings, totalDeductions, netSalary } = React.useMemo(() => {
+    const earnings = structure.filter(c => c.component_type === 'earning').reduce((sum, c) => sum + c.calculated_amount, 0);
+    const deductions = structure.filter(c => c.component_type === 'deduction').reduce((sum, c) => sum + c.calculated_amount, 0);
+    return { totalEarnings: earnings, totalDeductions: deductions, netSalary: earnings - deductions };
+  }, [structure]);
 
-  const calculateTotals = () => {
-    const earnings = salaryStructure
-      .filter((component) => component.component_type === "earning")
-      .reduce((sum, component) => sum + component.calculated_amount, 0)
-
-    const deductions = salaryStructure
-      .filter((component) => component.component_type === "deduction")
-      .reduce((sum, component) => sum + component.calculated_amount, 0)
-
-    return { earnings, deductions, netSalary: earnings - deductions }
-  }
-
-  const { earnings, deductions, netSalary } = calculateTotals()
-
-  const pieData = [
+  const chartData = [
     { name: "Net Salary", value: netSalary, color: "#22c55e" },
-    { name: "Deductions", value: deductions, color: "#ef4444" },
+    { name: "Deductions", value: totalDeductions, color: "#ef4444" },
   ]
 
-  const COLORS = ["#22c55e", "#ef4444"]
+  const formatCurrency = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount)
+  
+  const getComponentBadge = (type: "earning" | "deduction") => (
+    <Badge variant={type === "earning" ? "default" : "secondary"} className={type === "earning" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
+      {type === "earning" ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+      {type === "earning" ? "Earning" : "Deduction"}
+    </Badge>
+  )
+  
+  if (isLoading) {
+    return <div className="text-center py-12">Loading your salary details...</div>
+  }
 
-  if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>
+  if (!structure || structure.length === 0) {
+      return (
+        <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>No Salary Structure Found</AlertTitle>
+            <AlertDescription>Your salary structure has not been configured yet. Please contact HR for assistance.</AlertDescription>
+        </Alert>
+      )
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">My Salary</h1>
-          <p className="text-muted-foreground">View your salary structure and components</p>
-        </div>
-        <Button>
-          <Download className="h-4 w-4 mr-2" />
-          Download Payslip
-        </Button>
-      </div>
-
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gross Earnings</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(earnings)}</div>
-            <p className="text-xs text-muted-foreground">Total earnings before deductions</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Deductions</CardTitle>
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(deductions)}</div>
-            <p className="text-xs text-muted-foreground">Total deductions from salary</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Salary</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(netSalary)}</div>
-            <p className="text-xs text-muted-foreground">Take-home salary</p>
-          </CardContent>
-        </Card>
+        <Card><CardHeader><CardTitle className="text-sm font-medium">Total Earnings</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-green-600">{formatCurrency(totalEarnings)}</p></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-sm font-medium">Total Deductions</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-red-600">{formatCurrency(totalDeductions)}</p></CardContent></Card>
+        <Card><CardHeader><CardTitle className="text-sm font-medium">Net Salary</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold text-blue-600">{formatCurrency(netSalary)}</p></CardContent></Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Salary Breakdown Chart */}
         <Card>
-          <CardHeader>
-            <CardTitle>Salary Breakdown</CardTitle>
-            <CardDescription>Visual representation of your salary structure</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Salary Breakdown</CardTitle><CardDescription>Visual breakdown of your salary components</CardDescription></CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent!! * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={chartData} cx="50%" cy="50%" innerRadius={60} outerRadius={120} paddingAngle={5} dataKey="value">
+                    {chartData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.color} />))}
+                  </Pie>
+                  <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Salary Components */}
         <Card>
-          <CardHeader>
-            <CardTitle>Salary Components</CardTitle>
-            <CardDescription>Detailed breakdown of all salary components</CardDescription>
-          </CardHeader>
+          <CardHeader><CardTitle>Salary Components</CardTitle><CardDescription>Detailed breakdown of all your components</CardDescription></CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Component</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {salaryStructure.map((component) => (
-                  <TableRow key={component.id}>
-                    <TableCell className="font-medium">{component.component_name}</TableCell>
-                    <TableCell>
-                      <Badge variant={component.component_type === "earning" ? "default" : "destructive"}>
-                        {component.component_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{formatCurrency(component.calculated_amount)}</TableCell>
-                  </TableRow>
-                ))}
-                <TableRow className="border-t-2">
-                  <TableCell className="font-bold">Net Salary</TableCell>
-                  <TableCell></TableCell>
-                  <TableCell className="text-right font-bold text-blue-600">{formatCurrency(netSalary)}</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader><TableRow><TableHead>Component</TableHead><TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead></TableRow></TableHeader>
+                <TableBody>
+                  {structure.map((component) => (
+                    <TableRow key={component.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{component.component_name}</p>
+                          {component.value_type === "percentage" && component.based_on_component_name && (
+                            <p className="text-xs text-muted-foreground">{component.value}% of {component.based_on_component_name}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>{getComponentBadge(component.component_type)}</TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(component.calculated_amount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
