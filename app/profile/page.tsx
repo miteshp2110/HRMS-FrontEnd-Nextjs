@@ -94,7 +94,7 @@ export default function MyProfilePage() {
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="employment">Employment</TabsTrigger>
-            {profile.salary_visibility && <TabsTrigger value="salary">Salary</TabsTrigger>}
+            {profile.salary_visibility?<TabsTrigger value="salary">Salary</TabsTrigger>:<></>}
             <TabsTrigger value="leaves">Leaves</TabsTrigger>
             <TabsTrigger value="loans">Loans</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
@@ -118,7 +118,7 @@ export default function MyProfilePage() {
                 onCancel={() => {}}
               />
           </TabsContent>
-          {profile.salary_visibility && (<TabsContent value="salary"><MySalaryPage /></TabsContent>)}
+          {profile.salary_visibility?(<TabsContent value="salary"><MySalaryPage /></TabsContent>):<></>}
           <TabsContent value="leaves"><MyLeavesPage /></TabsContent>
           <TabsContent value="loans"><MyLoansPage /></TabsContent>
           <TabsContent value="skills"><MySkillsTab /></TabsContent>

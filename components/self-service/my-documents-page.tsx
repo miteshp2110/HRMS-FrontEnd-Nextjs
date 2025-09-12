@@ -159,7 +159,7 @@ export function MyDocumentsPage() {
                         />
                     </div>
                     <div>
-                        <Label htmlFor="expiry-date">Expiry Date (Optional)</Label>
+                        <Label htmlFor="expiry-date">Expiry Date </Label>
                         <Input
                         id="expiry-date"
                         type="date"

@@ -231,7 +231,7 @@ export function JobEmploymentTab({ profile, isEditing, onSave, onCancel }: JobEm
                            {directReports.map(report => (
                                <div key={report.id} className="flex items-center space-x-4 p-2 rounded-md hover:bg-muted/50">
                                    <Avatar>
-                                       <AvatarImage src={report.profile_url} />
+                                       <AvatarImage className="object-cover" src={report.profile_url} />
                                        <AvatarFallback>{getInitials(report.first_name, report.last_name)}</AvatarFallback>
                                    </Avatar>
                                    <div className="flex-1">

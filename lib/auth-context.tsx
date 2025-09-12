@@ -9,9 +9,9 @@ interface User {
   email: string
   role: string
   permissions: string[]
-  firstName?: string
-  lastName?: string
-  profileImage?: string
+  first_name?: string
+  last_name?: string
+  profile_url?: string
   salary_visibility?: boolean
 }
 
