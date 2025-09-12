@@ -38,7 +38,8 @@ export function ProfileHeader({ profile, isEditing, onToggleEdit }: ProfileHeade
           <div className="flex-shrink-0">
             <Avatar className="h-32 w-32">
               <AvatarImage
-                src={profile.profile_url || "/placeholder.svg"}
+              className="object-cover"
+                src={profile.profile_url || undefined}
                 alt={`${profile.first_name} ${profile.last_name}`}
               />
               <AvatarFallback className="text-2xl">{getInitials(profile.first_name, profile.last_name)}</AvatarFallback>

@@ -8,6 +8,7 @@ export const API_CONFIG = {
 
     // Users
     USERS: "/user",
+    SELF: "/user/self",
     USER_PROFILE: "/user/profile",
     USER_BY_ID: (id: string) => `/user/profile/${id}`,
     USER_SEARCH: "/user/search",

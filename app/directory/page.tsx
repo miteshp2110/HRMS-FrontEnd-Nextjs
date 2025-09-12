@@ -15,6 +15,8 @@ export default function DirectoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [limit, setLimit] = useState(20)
+  const [inActive,setInactive] = useState(false)
+  
   
   // State for the immediate input value
   const [searchTerm, setSearchTerm] = useState("")
@@ -33,7 +35,7 @@ export default function DirectoryPage() {
     return () => {
       clearTimeout(handler);
     };
-  }, [searchTerm]);
+  }, [searchTerm,inActive]);
 
 
   const fetchUsers = useCallback(async () => {
@@ -47,7 +49,7 @@ export default function DirectoryPage() {
       let result;
       if (debouncedSearchTerm) {
         // If there's a search term, call the search API
-        const searchResult = await searchUsers(debouncedSearchTerm);
+        const searchResult = await searchUsers(debouncedSearchTerm,inActive);
         // Adapt the search result to the PaginatedResponse structure for the table
         result = {
             success: true,
@@ -87,8 +89,9 @@ export default function DirectoryPage() {
   }
 
   // handleSearch now just updates the immediate search term
-  const handleSearch = (term: string) => {
+  const handleSearch = (term: string,inActive:boolean) => {
     setSearchTerm(term)
+    setInactive(inActive)
     setCurrentPage(1) 
   }
 

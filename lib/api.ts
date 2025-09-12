@@ -405,6 +405,16 @@ export interface LeaveRecordHistory {
   your_approval_level?: "primary" | "secondary";
 }
 
+export interface SkilledEmployee {
+  employee_id: number;
+  employee_name: string;
+  approved_by_name: string | null;
+}
+
+export async function getEmployeesBySkill(skillName: string): Promise<SkilledEmployee[]> {
+  return apiRequest<SkilledEmployee[]>(`/skillMatrix/skills/${encodeURIComponent(skillName)}/employees`);
+}
+
 
 export async function getApprovalHistory(startDate: string, endDate: string): Promise<LeaveRecordHistory[]> {
   const params = new URLSearchParams({ startDate, endDate });
@@ -826,10 +836,16 @@ export async function createUser(
     return await response.json();
 }
 
-export async function searchUsers(term: string): Promise<UserProfile[]> {
-  const params = new URLSearchParams({ term })
-  return apiRequest<UserProfile[]>(`${API_CONFIG.ENDPOINTS.USER_SEARCH}?${params.toString()}`)
+export async function searchUsers(term: string, inActive: boolean = false): Promise<UserProfile[]> {
+  const params = new URLSearchParams({ term });
+
+  if (inActive) {
+    params.append("inActive", "true");
+  }
+
+  return apiRequest<UserProfile[]>(`${API_CONFIG.ENDPOINTS.USER_SEARCH}?${params.toString()}`);
 }
+
 export async function searchUsersByPermissions(permissions: string[]): Promise<UserProfile[]> {
   const params = new URLSearchParams()
   permissions.forEach(permission =>{params.append('permission',permission)})
@@ -845,10 +861,31 @@ export async function updateUser(
   userId: number,
   data: Partial<DetailedUserProfile>,
 ): Promise<{ success: boolean; message: string }> {
-  return apiRequest<{ success: boolean; message: string }>(`${API_CONFIG.ENDPOINTS.USERS}/${userId}`, {
+  return apiRequest<{ success: boolean; message: string }>(`${API_CONFIG.ENDPOINTS.USER_PROFILE}/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+
   })
+}
+
+export async function updateSelfProfile(
+  data:FormData | Partial<DetailedUserProfile>,
+): Promise<{ success: boolean; message: string }> {
+  
+  const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SELF}`, {
+        method: 'PATCH',
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
+        },
+        body: data instanceof FormData?data:JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, errorData.message || 'API request failed', errorData);
+    }
+
+    return await response.json();
 }
 
 export async function getCurrentUserProfile(): Promise<DetailedUserProfile> {

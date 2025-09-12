@@ -9,23 +9,25 @@ import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, Eye, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Eye, ChevronLeft, ChevronRight, Check } from "lucide-react"
 import type { UserProfile, PaginatedResponse } from "@/lib/api"
 
 interface UserTableProps {
   data: PaginatedResponse<UserProfile>
   onPageChange: (page: number) => void
   onLimitChange: (limit: number) => void
-  onSearch: (search: string) => void
+  onSearch: (search: string,inActivity:boolean) => void
   isLoading: boolean
 }
 
 export function UserTable({ data, onPageChange, onLimitChange, onSearch, isLoading }: UserTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const [inActive,setInactive] = useState(false)
+
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value)
-    onSearch(value)
+    onSearch(value,inActive)
   }
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -57,6 +59,19 @@ export function UserTable({ data, onPageChange, onLimitChange, onSearch, isLoadi
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle>Employee Directory</CardTitle>
           <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            <div className="flex items-center space-x-2">
+              <input
+                id="inactive-users"
+                type="checkbox"
+                checked={inActive} 
+                onChange={(e) => setInactive(e.target.checked)}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="inactive-users" className="text-sm text-gray-700">
+                Inactive Users
+              </label>
+            </div>
+
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -109,13 +124,15 @@ export function UserTable({ data, onPageChange, onLimitChange, onSearch, isLoadi
                       </TableCell>
                     </TableRow>
                   ) : (
-                    data.data.map((user) => (
-                      <TableRow key={user.id}>
+                    data.data.map((user) =>{
+                      if(inActive){
+                        return (user.is_active==false?<TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10">
                               <AvatarImage
-                                src={user.profile_url || "/placeholder.svg"}
+                                className="object-cover"
+                                src={user.profile_url || undefined}
                                 alt={`${user.first_name} ${user.last_name}`}
                               />
                               <AvatarFallback>{getInitials(user.first_name, user.last_name)}</AvatarFallback>
@@ -142,8 +159,45 @@ export function UserTable({ data, onPageChange, onLimitChange, onSearch, isLoadi
                             </Link>
                           </Button>
                         </TableCell>
-                      </TableRow>
-                    ))
+                      </TableRow>:<></>)
+                      }
+                      else{
+                        return(user.is_active==true?<TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage
+                                className="object-cover"
+                                src={user.profile_url || undefined}
+                                alt={`${user.first_name} ${user.last_name}`}
+                              />
+                              <AvatarFallback>{getInitials(user.first_name, user.last_name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium">
+                                {user.first_name} {user.last_name}
+                              </p>
+                              {user.phone && <p className="text-sm text-muted-foreground">{user.phone}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.job_title || "—"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{user.role_name}</Badge>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(user.is_active)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/directory/${user.id}`}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>:<></>)
+                      }
+                    })
                   )}
                 </TableBody>
               </Table>

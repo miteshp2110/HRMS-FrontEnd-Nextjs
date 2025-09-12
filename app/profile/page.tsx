@@ -1,3 +1,5 @@
+
+
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -15,6 +17,7 @@ import { MySkillsTab } from "@/components/profile/my-skills-tab"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   getCurrentUserProfile,
+  updateSelfProfile,
   updateUser,
   type DetailedUserProfile,
 } from "@/lib/api"
@@ -34,12 +37,10 @@ export default function MyProfilePage() {
         setIsLoading(false);
         return;
     }
-    
     setIsLoading(true);
     try {
       const profileData = await getCurrentUserProfile();
       setProfile(profileData);
-    
     } catch (error) {
       console.error("Error fetching profile data:", error);
       toast({ title: "Error", description: "Could not load your profile.", variant: "destructive" });
@@ -54,13 +55,13 @@ export default function MyProfilePage() {
 
   const handleToggleEdit = () => setIsEditing(prev => !prev);
 
-  const handleSaveChanges = async (updatedData: Partial<DetailedUserProfile>) => {
+  const handleSaveChanges = async (updatedData: Partial<DetailedUserProfile> | FormData) => {
     if (!user) return;
     try {
-        await updateUser(user.id, updatedData);
+        await updateSelfProfile(updatedData);
         toast({ title: "Success", description: "Your profile has been updated." });
         setIsEditing(false);
-        fetchProfileData();
+        await fetchProfileData();
     } catch(error: any) {
         toast({ title: "Update Failed", description: error.message || "Could not save changes.", variant: "destructive"});
     }
@@ -93,7 +94,7 @@ export default function MyProfilePage() {
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="employment">Employment</TabsTrigger>
-            {profile.salary_visibility==true?<TabsTrigger value="salary">Salary</TabsTrigger>:<></>}
+            {profile.salary_visibility && <TabsTrigger value="salary">Salary</TabsTrigger>}
             <TabsTrigger value="leaves">Leaves</TabsTrigger>
             <TabsTrigger value="loans">Loans</TabsTrigger>
             <TabsTrigger value="skills">Skills</TabsTrigger>
@@ -112,7 +113,7 @@ export default function MyProfilePage() {
           <TabsContent value="employment">
             <JobEmploymentTab 
                 profile={profile} 
-                isEditing={false} // Editing is disabled for employment tab in self-profile
+                isEditing={false}
                 onSave={async () => {}}
                 onCancel={() => {}}
               />
