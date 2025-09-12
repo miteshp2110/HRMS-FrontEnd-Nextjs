@@ -411,6 +411,27 @@ export interface SkilledEmployee {
   approved_by_name: string | null;
 }
 
+export interface EmployeeInRole{
+  id:number
+  name:string
+  profile_url:string | null
+  job_title:string
+}
+export interface EmployeeInJob{
+  id:number
+  name:string
+  profile_url:string | null
+  role_name:string
+}
+
+
+
+export async function getEmployeesInJob(jobId: number): Promise<EmployeeInJob[]> {
+  return apiRequest<EmployeeInJob[]>(`/jobs/${jobId}/employees`);
+}
+export async function getEmployeesInRole(roleId: number): Promise<EmployeeInRole[]> {
+  return apiRequest<EmployeeInRole[]>(`/roles/${roleId}/employees`);
+}
 export async function getEmployeesBySkill(skillName: string): Promise<SkilledEmployee[]> {
   return apiRequest<SkilledEmployee[]>(`/skillMatrix/skills/${encodeURIComponent(skillName)}/employees`);
 }
