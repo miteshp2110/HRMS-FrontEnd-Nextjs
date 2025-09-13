@@ -46,7 +46,7 @@ export function ShiftsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
-  const [selectedTimezone, setSelectedTimezone] = useState("UTC");
+  const [selectedTimezone, setSelectedTimezone] = useState<string| null>(null);
 
   const canManageShifts = hasPermission("shift.manage")
 
@@ -59,7 +59,7 @@ export function ShiftsPage() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("selectedTimezone", selectedTimezone);
+    localStorage.setItem("selectedTimezone", selectedTimezone!);
   }, [selectedTimezone]);
 
 
@@ -196,7 +196,7 @@ export function ShiftsPage() {
             <p className="text-muted-foreground text-sm">All shift timings are stored in UTC and displayed in your selected timezone.</p>
             <div className="flex items-center gap-2 w-full sm:w-auto">
                 <Globe className="h-4 w-4 text-muted-foreground"/>
-                <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
+                <Select value={selectedTimezone!} onValueChange={setSelectedTimezone}>
                     <SelectTrigger className="w-full sm:w-[200px]">
                         <SelectValue placeholder="Select a timezone" />
                     </SelectTrigger>
@@ -260,6 +260,8 @@ export function ShiftsPage() {
                 <TableHead>Shift Name</TableHead>
                 <TableHead>Timings ({selectedTimezone})</TableHead>
                 <TableHead>Duration</TableHead>
+                <TableHead>Half-Day</TableHead>
+                <TableHead>Margin</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -267,8 +269,10 @@ export function ShiftsPage() {
               {shifts.map((shift) => (
                 <TableRow key={shift.id}>
                   <TableCell className="font-medium">{shift.name}</TableCell>
-                  <TableCell>{formatTimeInTimezone(shift.from_time, selectedTimezone)} - {formatTimeInTimezone(shift.to_time, selectedTimezone)}</TableCell>
+                  <TableCell>{formatTimeInTimezone(shift.from_time, selectedTimezone!)} - {formatTimeInTimezone(shift.to_time, selectedTimezone!)}</TableCell>
                   <TableCell>{calculateDuration(shift.from_time, shift.to_time)}</TableCell>
+                  <TableCell>{shift.half_day_threshold}h</TableCell>
+                  <TableCell>{shift.punch_in_margin.toString().split('.')[0]}m/{shift.punch_out_margin.toString().split('.')[0]}m</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button

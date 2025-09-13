@@ -303,7 +303,7 @@ export default function AttendanceRecordsPage() {
   const [isPunchOutDialogOpen, setIsPunchOutDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
   const [newPayType, setNewPayType] = useState<string>("");
-  const [selectedTimezone, setSelectedTimezone] = useState("UTC");
+  const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null);
   
   const [employeeSearch, setEmployeeSearch] = useState("")
   const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] = useState("")
@@ -342,7 +342,7 @@ export default function AttendanceRecordsPage() {
   }, [debouncedEmployeeSearch]);
 
   useEffect(() => {
-    const savedTimezone = localStorage.getItem("attendanceTimezone");
+    const savedTimezone = localStorage.getItem("selectedTimezone");
     if (savedTimezone && timezones.includes(savedTimezone)) {
       setSelectedTimezone(savedTimezone);
     }
@@ -360,7 +360,7 @@ export default function AttendanceRecordsPage() {
   }, [canManageAttendance, toast]);
 
   useEffect(() => {
-    localStorage.setItem("attendanceTimezone", selectedTimezone);
+    localStorage.setItem("attendanceTimezone", selectedTimezone!);
   }, [selectedTimezone]);
 
   const fetchRecords = useCallback(async (isLoadMore = false) => {
@@ -460,7 +460,7 @@ export default function AttendanceRecordsPage() {
   const formatTime = (timeString: string | null) => {
     if (!timeString) return "-";
     return new Date(timeString).toLocaleTimeString("en-US", {
-      timeZone: selectedTimezone,
+      timeZone: selectedTimezone!,
       hour: "2-digit",
       minute: "2-digit",
       hour12: true,
@@ -554,7 +554,7 @@ export default function AttendanceRecordsPage() {
             <h1 className="text-3xl font-bold">Attendance Records</h1>
           </div>
           <div className="flex items-center gap-4">
-            <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
+            <Select value={selectedTimezone!} onValueChange={setSelectedTimezone}>
               <SelectTrigger className="w-[180px]">
                 <Globe className="h-4 w-4 mr-2"/>
                 <SelectValue />
