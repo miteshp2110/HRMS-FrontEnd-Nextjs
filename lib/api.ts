@@ -32,7 +32,6 @@ export interface LeaveRecord{
   employee_id: number,
   employee_name:string,
   primary_user : number
-
 }
 export interface AttendanceRecord {
   id: number
@@ -422,6 +421,56 @@ export interface EmployeeInJob{
   name:string
   profile_url:string | null
   role_name:string
+}
+
+export interface PayslipHistory {
+  id: number
+  payroll_id: number
+  employee_id: number
+  pay_period_start: string
+  pay_period_end: string
+  payment_date: string | null
+  gross_earnings: string
+  total_deductions: string
+  net_pay: string
+  created_at: string
+  details: {
+    id: number
+    payslip_id: number
+    component_name: string
+    component_type: "earning" | "deduction"
+    amount: string
+  }[]
+}
+
+export interface EmployeePayslipHistory {
+  id: number
+  payroll_id: number
+  employee_id: number
+  pay_period_start: string
+  pay_period_end: string
+  payment_date: string | null
+  gross_earnings: string
+  total_deductions: string
+  net_pay: string
+  created_at: string
+  details: {
+    id: number
+    payslip_id: number
+    component_name: string
+    component_type: "earning" | "deduction"
+    amount: string
+  }[]
+}
+
+export async function getEmployeePayslipHistory(employeeId: number, endDate: string): Promise<EmployeePayslipHistory[]> {
+  const params = new URLSearchParams({ endDate });
+  return apiRequest<EmployeePayslipHistory[]>(`/payroll/history/employee/${employeeId}?${params.toString()}`);
+}
+
+export async function getMyPayslipHistory(endDate: string): Promise<PayslipHistory[]> {
+  const params = new URLSearchParams({ endDate });
+  return apiRequest<PayslipHistory[]>(`/payroll/history/me?${params.toString()}`);
 }
 
 

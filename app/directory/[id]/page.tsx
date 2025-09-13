@@ -238,11 +238,11 @@ export default function EmployeeProfilePage() {
             <TabsTrigger value="employment">Employment</TabsTrigger>
             <TabsTrigger value="bank">Bank</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
-            {canViewPayroll && <TabsTrigger value="salary">Salary</TabsTrigger>}
-            {canManageLeaves && <TabsTrigger value="leaves">Leaves</TabsTrigger>}
-            {canManageLoans && <TabsTrigger value="loans">Loans</TabsTrigger>}
-            {canManageSkills && <TabsTrigger value="skills">Skills</TabsTrigger>}
-            {canManageExpense && <TabsTrigger value="expenses">Expenses</TabsTrigger>}
+            {canViewPayroll?<TabsTrigger value="salary">Salary</TabsTrigger>:<></>}
+            {canManageLeaves?<TabsTrigger value="leaves">Leaves</TabsTrigger>:<></>}
+            {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>}
+            {canManageSkills?<TabsTrigger value="skills">Skills</TabsTrigger>:<></>}
+            {canManageExpense ?<TabsTrigger value="expenses">Expenses</TabsTrigger>:<></>}
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
           </TabsList>
 
@@ -264,7 +264,7 @@ export default function EmployeeProfilePage() {
           </TabsContent>
           <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} /></TabsContent>
           <TabsContent value="documents"><DocumentsTab documents={documents} isLoading={isLoading} /></TabsContent>
-          {canViewPayroll && (<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>)}
+          {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
           <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent>
           <TabsContent value="skills"><EmployeeSkillsTab skills={skills} isLoading={isLoading} /></TabsContent>
