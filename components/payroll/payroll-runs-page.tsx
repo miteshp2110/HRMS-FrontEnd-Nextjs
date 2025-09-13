@@ -167,11 +167,19 @@ export function PayrollRunsPage() {
                 <TableBody>
                 {payrollRuns.map((run) => (
                     <TableRow key={run.id}>
-                    <TableCell className="font-medium">{new Date(run.pay_period_start).toLocaleDateString()} - {new Date(run.pay_period_end).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-medium">
+  {(() => {
+    const formatDate = (d: Date) =>
+      `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+
+    return `${formatDate(new Date(run.pay_period_start))} - ${formatDate(new Date(run.pay_period_end))}`;
+  })()}
+</TableCell>
+
                     <TableCell>{formatCurrency(run.total_net_pay)}</TableCell>
                     <TableCell>{getStatusBadge(run.status)}</TableCell>
                     <TableCell>{run.initiated_by_name}</TableCell>
-                    <TableCell>{run.finalized_at ? new Date(run.finalized_at).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell>{run.finalized_at ? new Date(run.finalized_at).toLocaleDateString("en-GB").replace(/\//g, "-") : 'N/A'}</TableCell>
                     <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => router.push(`/payroll/runs/${run.id}`)}><Eye className="h-4 w-4" /></Button>

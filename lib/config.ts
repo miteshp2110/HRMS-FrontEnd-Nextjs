@@ -57,6 +57,7 @@ export const API_CONFIG = {
     LEAVE_TYPES: "/leaves/types",
     REQUEST_LEAVE: "/leaves/request-leave",
     LEAVE_RECORDS: "/leaves/records",
+    LEAVE_REQUEST: "/leaves/request",
     PRIMARY_LEAVE_APPROVALS: "/leaves/primary-approval",
     SECONDARY_LEAVE_APPROVALS: "/leaves/secondry-approval",
 
@@ -66,6 +67,10 @@ export const API_CONFIG = {
     PAYROLL_RUNS: "/payroll/runs",
     PAYROLL_STRUCTURE: (userId: string) => `/payroll/structure/${userId}`,
     MY_SALARY_STRUCTURE: "/payroll/structure",
+
+    // Reports
+
+    REPORT_PAYROLL_RUN: "/api/reports/payroll/run",
 
 
     // Bank Details

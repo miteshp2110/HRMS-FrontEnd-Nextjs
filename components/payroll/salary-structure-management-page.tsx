@@ -680,7 +680,14 @@ export function SalaryStructureManagementPage() {
                         className="w-full"
                       />
                       <p className="text-sm text-muted-foreground">
-                        This will fetch payslips from {new Date(new Date(endDate).getTime() - 365 * 24 * 60 * 60 * 1000).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}
+                        This will fetch payslips from {new Date(new Date(endDate).getTime() - 365 * 24 * 60 * 60 * 1000)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}{" "}
+to{" "}
+{new Date(endDate)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}
+
                       </p>
                     </div>
                   </CardContent>
@@ -693,7 +700,14 @@ export function SalaryStructureManagementPage() {
                 ) : (
                   <div className="space-y-6">
                       <Card>
-                          <CardHeader><CardTitle>Net Pay Trend</CardTitle><CardDescription>{selectedEmployee.first_name}'s take-home salary from {new Date(new Date(endDate).getTime() - 365 * 24 * 60 * 60 * 1000).toLocaleDateString()} to {new Date(endDate).toLocaleDateString()}</CardDescription></CardHeader>
+                          <CardHeader><CardTitle>Net Pay Trend</CardTitle><CardDescription>{selectedEmployee.first_name}'s take-home salary from {new Date(new Date(endDate).getTime() - 365 * 24 * 60 * 60 * 1000)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}{" "}
+to{" "}
+{new Date(endDate)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}
+</CardDescription></CardHeader>
                           <CardContent>
                               <ResponsiveContainer width="100%" height={300}>
                                   <LineChart data={chartData}>
@@ -715,7 +729,12 @@ export function SalaryStructureManagementPage() {
                                   <TableBody>
                                       {payslipHistory.map(p => (
                                           <TableRow key={p.id} className="cursor-pointer hover:bg-muted" onClick={() => handlePayslipClick(p)}>
-                                              <TableCell>{new Date(p.pay_period_start).toLocaleDateString()} - {new Date(p.pay_period_end).toLocaleDateString()}</TableCell>
+                                              <TableCell>{(() => {
+  const format = (d: Date) =>
+    `${String(d.getDate()).padStart(2, "0")}-${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+  return `${format(new Date(p.pay_period_start))} - ${format(new Date(p.pay_period_end))}`;
+})()}
+</TableCell>
                                               <TableCell className="text-right font-medium text-green-600">{formatCurrency(parseFloat(p.gross_earnings))}</TableCell>
                                               <TableCell className="text-right font-medium text-red-600">{formatCurrency(parseFloat(p.total_deductions))}</TableCell>
                                               <TableCell className="text-right font-bold">{formatCurrency(parseFloat(p.net_pay))}</TableCell>

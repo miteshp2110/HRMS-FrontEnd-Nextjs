@@ -32,7 +32,7 @@ export function AdminStatsWidget({ headcount, todayAttendance }: AdminStatsWidge
         </div>
         <div className="p-4 bg-muted rounded-lg">
           <XCircle className="h-6 w-6 mx-auto text-red-500 mb-2" />
-          <p className="text-2xl font-bold">{todayAttendance.absent}</p>
+          <p className="text-2xl font-bold">{headcount-(todayAttendance.late+todayAttendance.present+todayAttendance.leave)}</p>
           <p className="text-xs text-muted-foreground">Absent</p>
         </div>
         <div className="p-4 bg-muted rounded-lg">

@@ -483,7 +483,7 @@ export function DocumentManagementPage() {
                             <TableRow key={doc.id}>
                                 <TableCell>{doc.employee_name}</TableCell>
                                 <TableCell>{doc.document_name}</TableCell>
-                                <TableCell className="text-red-500 font-medium">{new Date(doc.expiry_date).toLocaleDateString()}</TableCell>
+                                <TableCell className="text-red-500 font-medium">{new Date(doc.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-")}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -536,8 +536,8 @@ export function DocumentManagementPage() {
                                         {doc ? <Badge className="bg-green-100 text-green-800"><CheckCircle className="h-3 w-3 mr-1"/>Uploaded</Badge> 
                                              : <Badge ><XCircle className="h-3 w-3 mr-1"/>Missing</Badge>}
                                     </TableCell>
-                                    <TableCell>{doc ? new Date(doc.upload_date).toLocaleDateString() : 'N/A'}</TableCell>
-                                    <TableCell>{doc?.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : 'N/A'}</TableCell>
+                                    <TableCell>{doc ? new Date(doc.upload_date).toLocaleDateString("en-GB").replace(/\//g, "-") : 'N/A'}</TableCell>
+                                    <TableCell>{doc?.expiry_date ? new Date(doc.expiry_date).toLocaleDateString("en-GB").replace(/\//g, "-") : 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                         {doc && (
                                             <>

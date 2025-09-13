@@ -1153,7 +1153,7 @@ export async function getMyLeaveRecords(): Promise<LeaveBalance[]> {
 }
 
 export async function deleteLeaveRequest(recordId: number): Promise<void> {
-  await apiRequest(`${API_CONFIG.ENDPOINTS.LEAVE_RECORDS}/${recordId}`, {
+  await apiRequest(`${API_CONFIG.ENDPOINTS.LEAVE_REQUEST}/${recordId}`, {
     method: "DELETE",
   })
 }
@@ -1462,3 +1462,63 @@ export async function getExpensesSummary(): Promise<ExpenseSummary[]> {
   })
 }
 
+
+/**
+ * @description Fetches the payroll report Excel file from the API and triggers a download in the browser.
+ * @param payrollId The ID of the payroll run to generate the report for.
+ * @returns A promise that resolves when the download is initiated, or rejects on error.
+ */
+export async function downloadPayrollReport(payrollId: number): Promise<void> {
+  // Get the auth token from wherever you store it (e.g., localStorage, cookies)
+  const token = localStorage.getItem('hr_token'); 
+
+  try {
+    const response = await fetch(`http://localhost:4000/api/reports/payroll/run/${payrollId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // No 'Content-Type': 'application/json' needed here
+      },
+    });
+
+    if (!response.ok) {
+      // If the server returns an error (e.g., 404, 500), handle it
+      const errorData = await response.json(); // Try to parse error message as JSON
+      throw new Error(errorData.message || 'Failed to download the report.');
+    }
+
+    // 1. Get the binary data (the file itself) as a Blob
+    const blob = await response.blob();
+
+    // 2. Create a temporary URL for the Blob
+    const url = window.URL.createObjectURL(blob);
+
+    // 3. Create a temporary, hidden link element
+    const link = document.createElement('a');
+    link.href = url;
+
+    // 4. Extract the filename from the 'Content-Disposition' header sent by the server
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `Payroll_Report_${payrollId}.xlsx`; // A default filename
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch!.length > 1) {
+            filename = filenameMatch![1];
+        }
+    }
+    link.setAttribute('download', filename);
+
+    // 5. Add the link to the page, click it to trigger the download, and then remove it
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode!.removeChild(link);
+
+    // 6. Clean up the temporary URL
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Download error:', error);
+    // Re-throw the error so the component can catch it and show a notification
+    throw error;
+  }
+}

@@ -7,7 +7,8 @@ import { UserTable } from "@/components/directory/user-table"
 import { CreateUserDialog } from "@/components/directory/create-user-dialog"
 import { getAllUserProfiles, searchUsers, type PaginatedResponse, type UserProfile } from "@/lib/api"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Upload } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 export default function DirectoryPage() {
   const { hasPermission } = useAuth()
@@ -124,7 +125,12 @@ export default function DirectoryPage() {
             <h1 className="text-3xl font-bold">Employee Directory</h1>
             <p className="text-muted-foreground">Manage and view all employees in the organization.</p>
           </div>
-          <CreateUserDialog onUserCreated={fetchUsers} />
+          <div>
+            <CreateUserDialog onUserCreated={fetchUsers} />
+            <Button onClick={()=>{alert("Bulk Upload will be made availaible")}} className="ml-5.5 mr-2"><Upload/></Button>
+          </div>
+            
+          
         </div>
 
         {/* UserTable now receives the search term from the state */}

@@ -22,7 +22,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Plus, Calendar, CheckCircle, XCircle, Clock, Eye, User, AlertCircle } from "lucide-react"
-import { type LeaveBalance, type LeaveRecord, getLeaveBalances, getMyLeaveRecords, requestLeave, getLeaveTypes, type LeaveType } from "@/lib/api"
+import { type LeaveBalance, type LeaveRecord, getLeaveBalances, getMyLeaveRecords, requestLeave, getLeaveTypes, type LeaveType , deleteLeaveRequest} from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
 export function MyLeavesPage() {
@@ -71,6 +71,7 @@ export function MyLeavesPage() {
         toast({ title: "Error", description: "Please fill out all date and type fields.", variant: "destructive" });
         return;
     }
+    
 
     const fromDate = new Date(formData.from_date);
     const toDate = new Date(formData.to_date);
@@ -145,6 +146,11 @@ export function MyLeavesPage() {
     setSelectedLeave(leave)
     setDetailDialogOpen(true)
   }
+  const handleDeleteRequest=async(leaveId:number)=>{
+      setDetailDialogOpen(false)
+      await deleteLeaveRequest(selectedLeave?.id!)
+      await loadLeaveData()
+    }
 
   const getApprovalStatus = (leave: LeaveRecord) => {
     const status = getStatusFromRecord(leave)
@@ -440,6 +446,9 @@ export function MyLeavesPage() {
             </div>
           )}
           <DialogFooter>
+            {detailDialogOpen && getStatusFromRecord(selectedLeave!)==="pending"?<Button variant="destructive" onClick={() => {handleDeleteRequest(selectedLeave?.id!)}}>
+              Delete
+            </Button>:<></>}
             <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
               Close
             </Button>

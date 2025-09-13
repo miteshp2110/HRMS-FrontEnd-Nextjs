@@ -5,6 +5,12 @@
 import * as React from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,7 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { Calendar, CheckCircle, XCircle, Clock, User, MessageSquare, BarChart2, TrendingUp, CalendarDays } from "lucide-react"
+import { Calendar, CheckCircle, XCircle, Clock, User, MessageSquare, BarChart2, TrendingUp, CalendarDays, Info } from "lucide-react"
 import { getEmployeeLeaveBalance, getEmployeeLeaveRecords, type LeaveRecord, type LeaveBalance } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import Link from "next/link"
@@ -73,9 +79,10 @@ export function LeaveApprovalDialog({ leaveRecord, open, onOpenChange, onStatusU
   }
 
   const getStatusFromRecord = (record: LeaveRecord): "approved" | "rejected" | "pending" => {
-    if (record.rejection_reason !== null) return "rejected";
-    if (record.primary_status === true && record.secondry_status === true) return "approved";
-    if (record.primary_status === false || record.secondry_status === false) return "rejected";
+    // console.log(record)
+    if (record.rejection_reason != null) return "rejected";
+    if (record.primary_status == true && record.secondry_status == true) return "approved";
+    // if (record.primary_status == false || record.secondry_status == false) return "rejected";
     return "pending";
   }
 
@@ -143,8 +150,14 @@ export function LeaveApprovalDialog({ leaveRecord, open, onOpenChange, onStatusU
                           </CardHeader>
                           <CardContent className="space-y-6 text-sm">
                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4"/> <strong>From:</strong> {new Date(leaveRecord.from_date).toLocaleDateString()}</div>
-                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4"/> <strong>To:</strong> {new Date(leaveRecord.to_date).toLocaleDateString()}</div>
+                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4"/> <strong>From:</strong> {new Date(leaveRecord.from_date)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}
+</div>
+                                 <div className="flex items-center gap-2"><Calendar className="h-4 w-4"/> <strong>To:</strong> {new Date(leaveRecord.to_date)
+  .toLocaleDateString("en-GB")
+  .replace(/\//g, "-")}
+</div>
                                  <div className="flex items-center gap-2"><Clock className="h-4 w-4"/> <strong>Total Days:</strong> {calculateLeaveDays(leaveRecord.from_date, leaveRecord.to_date)}</div>
                              </div>
                              <div className="space-y-2">
@@ -194,8 +207,35 @@ export function LeaveApprovalDialog({ leaveRecord, open, onOpenChange, onStatusU
                                       <TableBody>
                                           {employeeHistory.records.filter(rec => rec.id !== leaveRecord.id).map(rec => (
                                             <TableRow key={rec.id}>
-                                                <TableCell>{rec.leave_type_name}</TableCell>
-                                                <TableCell>{new Date(rec.from_date).toLocaleDateString()} - {new Date(rec.to_date).toLocaleDateString()}</TableCell>
+                                                <TableCell><div className="flex items-center gap-2">
+                    {rec.leave_type_name}
+                    {rec.rejection_reason && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            data-info-icon
+                            className="opacity-100 group-hover:opacity-100 transition-opacity duration-200"
+                          >
+                            <Info className="h-4 w-4 text-red-500 cursor-help" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="text-sm">
+                            <p className="font-semibold text-red-600 mb-1">
+                              Rejection Reason:
+                            </p>
+                            <p>{rec.rejection_reason}</p>
+                            <p>By: {rec.primary_status==false?rec.primary_approver_name:rec.secondary_approver_name}</p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div></TableCell>
+                                                <TableCell>
+  {new Date(rec.from_date).toLocaleDateString("en-GB").replace(/\//g, "-")} -{" "}
+  {new Date(rec.to_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
+</TableCell>
+
                                                 <TableCell>{calculateLeaveDays(rec.from_date, rec.to_date)}</TableCell>
                                                 <TableCell>{getStatusBadge(getStatusFromRecord(rec))}</TableCell>
                                             </TableRow>
