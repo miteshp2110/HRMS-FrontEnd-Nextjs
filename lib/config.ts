@@ -65,6 +65,7 @@ export const API_CONFIG = {
     // Payroll
     PAYROLL_COMPONENTS: "/payroll/components",
     PAYROLL_RUNS: "/payroll/runs",
+    PAYROLL_RUN: "/payroll/run",
     PAYROLL_STRUCTURE: (userId: string) => `/payroll/structure/${userId}`,
     MY_SALARY_STRUCTURE: "/payroll/structure",
 
