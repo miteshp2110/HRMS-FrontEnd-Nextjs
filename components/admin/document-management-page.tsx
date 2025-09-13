@@ -336,10 +336,12 @@ const UploadDocumentDialog = ({ open, onOpenChange, onUploadSuccess, docTypes }:
                         <Label>Employee</Label>
                         <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" role="combobox" className="w-full justify-between">
-                                    {selectedUser ? `${selectedUser.first_name} ${selectedUser.last_name}` : "Search and select employee..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
+                                <button className="w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                                          {selectedUser
+                                                            ? `${selectedUser.first_name} ${selectedUser.last_name}`
+                                                            : "Select employee"}
+                                                          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                        </button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                 <Command>

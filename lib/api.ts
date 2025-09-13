@@ -779,7 +779,7 @@ export async function initiatePayrollRun(data: { from_date: string; to_date: str
 }
 
 export async function finalizePayrollRun(payrollId: number): Promise<void> {
-  await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_RUNS}/finalize/${payrollId}`, {
+  await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_RUN}/finalize/${payrollId}`, {
     method: "PATCH",
   })
 }
@@ -1473,7 +1473,7 @@ export async function downloadPayrollReport(payrollId: number): Promise<void> {
   const token = localStorage.getItem('hr_token'); 
 
   try {
-    const response = await fetch(`http://localhost:4000/api/reports/payroll/run/${payrollId}`, {
+    const response = await fetch(`https://hrms-backend-two.vercel.app/api/reports/payroll/run/${payrollId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
