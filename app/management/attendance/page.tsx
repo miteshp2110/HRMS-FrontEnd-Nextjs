@@ -509,7 +509,7 @@ export default function AttendanceRecordsPage() {
   }, [debouncedEmployeeSearch]);
 
   useEffect(() => {
-    const savedTimezone = localStorage.getItem("selectedTimezone");
+    const savedTimezone = localStorage.getItem("selectedTimezone") || "UTC";
     if (savedTimezone && timezones.includes(savedTimezone)) {
       setSelectedTimezone(savedTimezone);
     }

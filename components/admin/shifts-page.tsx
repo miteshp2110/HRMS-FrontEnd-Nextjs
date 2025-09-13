@@ -46,7 +46,7 @@ export function ShiftsPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null)
-  const [selectedTimezone, setSelectedTimezone] = useState<string| null>(null);
+  const [selectedTimezone, setSelectedTimezone] = useState<string| null>(localStorage.getItem("selectedTimezone") || "UTC");
 
   const canManageShifts = hasPermission("shift.manage")
 
