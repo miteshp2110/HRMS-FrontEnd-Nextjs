@@ -98,10 +98,14 @@ export interface DetailedUserProfile {
 }
 
 export interface BankDetails {
+  id:number
   user_id: number
   bank_name: string
   bank_account: string
   bank_ifsc: string
+  created_at : string
+  updated_at : string
+  updated_by_name:string
 }
 
 export interface EmployeeDocument {
@@ -1473,7 +1477,7 @@ export async function downloadPayrollReport(payrollId: number): Promise<void> {
   const token = localStorage.getItem('hr_token'); 
 
   try {
-    const response = await fetch(`https://hrms-backend-two.vercel.app/api/reports/payroll/run/${payrollId}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/${API_CONFIG.ENDPOINTS.REPORT_PAYROLL_RUN}/${payrollId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

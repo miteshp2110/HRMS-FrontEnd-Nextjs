@@ -262,7 +262,7 @@ export default function EmployeeProfilePage() {
                 onCancel={handleToggleEdit}
               />
           </TabsContent>
-          <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} /></TabsContent>
+          <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} employeeId={employeeId} onUpdate={fetchProfileData} /></TabsContent>
           <TabsContent value="documents"><DocumentsTab documents={documents} isLoading={isLoading} /></TabsContent>
           {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
