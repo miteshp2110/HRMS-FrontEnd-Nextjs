@@ -39,8 +39,10 @@ import {
   Banknote,
   Wallet,
   CalendarPlus,
-  RefreshCw, // Import the correct icon if it's missing
+  RefreshCw,
+  PanelRightDashedIcon,
 } from "lucide-react"
+import DashboardPage from "@/app/dashboard/page"
 
 interface NavItem {
   title: string
@@ -51,83 +53,24 @@ interface NavItem {
 }
 
 const navigationItems: NavItem[] = [
-  {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "My Profile",
-    href: "/profile",
-    icon: User,
-  },
+  
   {
     title: "Directory",
     href: "/directory",
     icon: Users,
     permission: "user.manage",
   },
-  {
-    title: "HR Administration",
-    icon: Settings,
-    children: [
-      {
-        title: "Roles & Permissions",
-        href: "/admin/roles",
-        icon: Shield,
-        permission: "roles.manage",
-      },
-      {
-        title: "Job Titles",
-        href: "/admin/jobs",
-        icon: Briefcase,
-        permission: "job.manage",
-      },
-      {
-        title: "Shifts",
-        href: "/admin/shifts",
-        icon: Clock,
-        permission: "shift.manage",
-      },
-      {
-        title: "Skills Library",
-        href: "/admin/skills",
-        icon: BookOpen,
-        permission: "skills.manage",
-      },
-      {
-        title: "Document Types",
-        href: "/admin/documents",
-        icon: FileText,
-        permission: "documents.manage",
-      },
-      {
-        title: "Company Calendar",
-        href: "/admin/calendar",
-        icon: Calendar,
-        permission: "calender.manage",
-      },
-      // --- Start of Fix: Moved Leave Types here ---
-      {
-        title: "Leave Types",
-        href: "/management/leave-types",
-        icon: CalendarPlus,
-        permission: "leaves.manage",
-      },
-      // --- End of Fix ---
-    ],
-  },
+  
   {
     title: "Employee Management",
     icon: UserCheck,
     children: [
       {
-        title: "Leave Approvals", // Renamed for clarity
+        title: "Leave Approvals", 
         href: "/management/leaves",
         icon: UserPlus,
         permission: "leaves.manage",
       },
-      // --- Item removed from here ---
       {
         title: "Attendance Records",
         href: "/management/attendance",
@@ -162,13 +105,13 @@ const navigationItems: NavItem[] = [
         title: "Shift Rotation",
         href: "/management/shift-rotation",
         icon: RefreshCw,
-        permission: "shift.manage", // Assuming this permission
+        permission: "shift.manage", 
       },
       {
         title: "Employee Reports",
         href: "/management/employee-reports",
         icon: FileText,
-        permission: "user.manage", // Assuming this permission
+        permission: "user.manage",
       },
     ],
   },
@@ -186,7 +129,7 @@ const navigationItems: NavItem[] = [
       {
         title: "Salary Structures",
         href: "/payroll/structure",
-        icon: DollarSign, // Or another icon you prefer
+        icon: DollarSign, 
         permission: "payroll.manage",
       },
 
@@ -199,9 +142,26 @@ const navigationItems: NavItem[] = [
     ],
   },
   {
+    title: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+    permission: "roles.manage"
+  },
+  {
+    title: "My Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "My Profile",
+    href: "/profile",
+    icon: User,
+  },
+  {
     title: "Self-Service",
     icon: User,
     children: [
+      
       {
         title: "My Attendance",
         href: "/self-service/attendance",
@@ -335,8 +295,8 @@ export function Sidebar() {
       </Button>
     )
   }
-
-  const visibleNavigationItems = navigationItems.filter((item) => shouldShowItem(item))
+  
+  const isManager = hasPermission("user.manage") || hasPermission("leaves.manage");
 
   return (
     <div
@@ -358,7 +318,19 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
-        {visibleNavigationItems.map((item) => renderNavItem(item))}
+        {isManager && (
+            <Button
+                variant={pathname === "/admin/dashboard" ? "secondary" : "ghost"}
+                className={cn("w-full justify-start gap-2 h-10", isCollapsed && "px-2")}
+                asChild
+            >
+                <Link href="/admin/dashboard">
+                    <LayoutDashboard className="h-4 w-4 shrink-0" />
+                    {!isCollapsed && <span className="truncate">Admin Dashboard</span>}
+                </Link>
+            </Button>
+        )}    
+        {navigationItems.map((item) => renderNavItem(item))}
 
         {user?.salary_visibility && (
           <Button

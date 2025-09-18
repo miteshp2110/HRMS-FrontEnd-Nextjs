@@ -22,6 +22,7 @@ import {
   type DetailedUserProfile,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { SelfProfileHeader } from "@/components/profile/self-profile"
 
 export default function MyProfilePage() {
   const { user } = useAuth()
@@ -88,7 +89,7 @@ export default function MyProfilePage() {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <ProfileHeader profile={profile} isEditing={isEditing} onToggleEdit={handleToggleEdit} />
+        <SelfProfileHeader profile={profile} isEditing={isEditing} onToggleEdit={handleToggleEdit} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
@@ -112,6 +113,7 @@ export default function MyProfilePage() {
           </TabsContent>
           <TabsContent value="employment">
             <JobEmploymentTab 
+                isSelfProfile={true}
                 profile={profile} 
                 isEditing={false}
                 onSave={async () => {}}

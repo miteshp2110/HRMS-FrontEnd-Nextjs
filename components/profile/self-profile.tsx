@@ -6,14 +6,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Mail, Phone, Calendar, User, Edit, X, Eye } from "lucide-react"
 import type { DetailedUserProfile } from "@/lib/api"
 
-interface ProfileHeaderProps {
+interface SelfProfileHeaderProps {
   profile: DetailedUserProfile
   isEditing: boolean
   onToggleEdit: () => void
-  onViewAuditHistory: () => void;
 }
 
-export function ProfileHeader({ profile, isEditing, onToggleEdit, onViewAuditHistory }: ProfileHeaderProps) {
+export function SelfProfileHeader({ profile, isEditing, onToggleEdit }: SelfProfileHeaderProps) {
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
   }
@@ -59,9 +58,9 @@ export function ProfileHeader({ profile, isEditing, onToggleEdit, onViewAuditHis
                         <Badge variant="outline">{profile.role_name}</Badge>
                         {getStatusBadge(profile.is_active)}
                     </div>
+                    
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={onViewAuditHistory}><Eye className="h-4 w-4"/></Button>
                     <Button variant={isEditing ? "destructive" : "outline"} onClick={onToggleEdit}>
                         {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
                         {isEditing ? "Cancel Edit" : "Edit Profile"}

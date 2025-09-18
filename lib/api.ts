@@ -72,6 +72,7 @@ export interface UserProfile {
   is_active: boolean
   role_name: string
   job_title?: string
+  full_employee_id:string
 }
 
 export interface DetailedUserProfile {
@@ -95,6 +96,14 @@ export interface DetailedUserProfile {
   shift_name?: string
   is_probation?: boolean
   salary_visibility?: boolean
+  inactive_date?:string
+  inactive_reason?:string
+  is_payroll_exempt:boolean
+  nationality:string,
+  inactivated_by_name:string
+  inactivated_by:number
+  full_employee_id:string
+
 }
 
 export interface BankDetails {
@@ -206,6 +215,7 @@ export interface ExpenseSummary{
 export interface DocumentType {
   id: number
   name: string
+  reminder_threshold:number
 }
 
 export interface Holiday {
@@ -701,14 +711,14 @@ export async function getDocumentTypes(): Promise<DocumentType[]> {
   return apiRequest<DocumentType[]>(API_CONFIG.ENDPOINTS.DOCUMENT_TYPES)
 }
 
-export async function createDocumentType(data: { name: string }): Promise<DocumentType> {
+export async function createDocumentType(data: { name: string, reminder_threshold:number }): Promise<DocumentType> {
   return apiRequest<DocumentType>(API_CONFIG.ENDPOINTS.DOCUMENT_TYPES, {
     method: "POST",
     body: JSON.stringify(data),
   })
 }
 
-export async function updateDocumentType(id: number, data: { name: string }): Promise<void> {
+export async function updateDocumentType(id: number, data: { name: string, reminder_threshold:number }): Promise<void> {
   await apiRequest(`${API_CONFIG.ENDPOINTS.DOCUMENT_TYPES}/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -943,24 +953,39 @@ export async function updateUser(
 }
 
 export async function updateSelfProfile(
-  data:FormData | Partial<DetailedUserProfile>,
+  data: FormData | Partial<DetailedUserProfile>,
 ): Promise<{ success: boolean; message: string }> {
-  
-  const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SELF}`, {
-        method: 'PATCH',
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
-        },
-        body: data instanceof FormData?data:JSON.stringify(data),
-    });
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new ApiError(response.status, errorData.message || 'API request failed', errorData);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("hr_token") || ""}`,
+  }
+
+  // Add Content-Type only if NOT FormData
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+
+  const response = await fetch(
+    `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SELF}`,
+    {
+      method: "PATCH",
+      headers,
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }
+  )
 
-    return await response.json();
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new ApiError(
+      response.status,
+      errorData.message || "API request failed",
+      errorData
+    )
+  }
+
+  return await response.json()
 }
+
 
 export async function getCurrentUserProfile(): Promise<DetailedUserProfile> {
   return apiRequest<DetailedUserProfile>(API_CONFIG.ENDPOINTS.USER_PROFILE)
@@ -1525,4 +1550,54 @@ export async function downloadPayrollReport(payrollId: number): Promise<void> {
     // Re-throw the error so the component can catch it and show a notification
     throw error;
   }
+}
+
+
+export interface NameSeries {
+  id: number;
+  table_name: string;
+  prefix: string;
+  padding_length: number;
+  created_at: string;
+  updated_at: string;
+  updated_by_name: string;
+}
+
+export async function getNameSeries(): Promise<NameSeries[]> {
+    return apiRequest<NameSeries[]>('/settings/name-series');
+}
+
+export async function createNameSeries(data: { table_name: string; prefix: string; padding_length: number }): Promise<NameSeries> {
+    return apiRequest<NameSeries>('/settings/name-series', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateNameSeries(id: number, data: { table_name: string; prefix: string; padding_length: number }): Promise<void> {
+    await apiRequest(`/settings/name-series/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deactivateUser(userId: number, inactive_reason: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/user/deactivate/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ inactive_reason }),
+  });
+}
+
+export interface UserAudit {
+  audit_id: number;
+  field_changed: string;
+  old_value: string;
+  new_value: string;
+  updated_at: string;
+  updated_by_name: string;
+  updated_by : number
+}
+
+export async function getUserAuditHistory(userId: number): Promise<UserAudit[]> {
+  return apiRequest<UserAudit[]>(`/user/audit/${userId}`);
 }
