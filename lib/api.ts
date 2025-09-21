@@ -33,24 +33,24 @@ export interface LeaveRecord{
   employee_name:string,
   primary_user : number
 }
-export interface AttendanceRecord {
-  id: number
-  attendance_date: string
-  shift: number
-  punch_in: string | null
-  punch_out: string | null
-  hours_worked: string | null
-  attendance_status: "present" | "absent" | "leave" | "late"
-  pay_type: "full_day" | "half_day" | "unpaid" | "leave" | "overtime" | "no_punch_out"
-  overtime_status: string | null
-  overtime_approved_by: string | null
-  created_at: string
-  updated_at: string
-  updated_by: string
-  first_name: string
-  last_name: string
-  employee_id: number
-}
+// export interface AttendanceRecord {
+//   id: number
+//   attendance_date: string
+//   shift: number
+//   punch_in: string | null
+//   punch_out: string | null
+//   hours_worked: string | null
+//   attendance_status: "present" | "absent" | "leave" | "late"
+//   pay_type: "full_day" | "half_day" | "unpaid" | "leave" | "overtime" | "no_punch_out"
+//   overtime_status: string | null
+//   overtime_approved_by: string | null
+//   created_at: string
+//   updated_at: string
+//   updated_by: string
+//   first_name: string
+//   last_name: string
+//   employee_id: number
+// }
 
 export interface DashboardStats {
   pendingLeaveApprovals: number
@@ -1334,27 +1334,51 @@ export async function getAttendanceRecords(): Promise<AttendanceRecord[]> {
 }
 
 
-export async function getAllAttendance(params?: {
-  employee_id?: number
-  shift_id?: number
-  date?: string
-  week?: number
-  month?: number
-  year?: number
-  page?: number
-  limit?: number
-}): Promise<AttendanceRecord[]> {
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, value.toString())
-      }
-    })
-  }
+// export async function getAllAttendance(params?: {
+//   employee_id?: number
+//   shift_id?: number
+//   date?: string
+//   week?: number
+//   month?: number
+//   year?: number
+//   page?: number
+//   limit?: number
+// }): Promise<AttendanceRecord[]> {
+//   const searchParams = new URLSearchParams()
+//   if (params) {
+//     Object.entries(params).forEach(([key, value]) => {
+//       if (value !== undefined) {
+//         searchParams.append(key, value.toString())
+//       }
+//     })
+//   }
 
-  const endpoint = `${API_CONFIG.ENDPOINTS.ATTENDANCE_ALL}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
-  return apiRequest<AttendanceRecord[]>(endpoint)
+//   const endpoint = `${API_CONFIG.ENDPOINTS.ATTENDANCE_ALL}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+//   return apiRequest<AttendanceRecord[]>(endpoint)
+// }
+export async function getAllAttendance(
+  params: {
+    employee_id?: number;
+    shift_id?: number;
+    date?: string; // Changed from day, month, year to a single date string
+    week?: number;
+    month?: number;
+    year?: number;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<AttendanceRecord[]> {
+  const query = new URLSearchParams();
+  if (params.employee_id) query.append("employee_id", String(params.employee_id));
+  if (params.shift_id) query.append("shift_id", String(params.shift_id));
+  if (params.date) query.append("date", params.date);
+  if (params.week) query.append("week", String(params.week));
+  if (params.month) query.append("month", String(params.month));
+  if (params.year) query.append("year", String(params.year));
+  if (params.page) query.append("page", String(params.page));
+  if (params.limit) query.append("limit", String(params.limit));
+
+  return apiRequest<AttendanceRecord[]>(`/attendance/all?${query.toString()}`);
 }
 
 export async function updateAttendancePayType(
@@ -1600,4 +1624,159 @@ export interface UserAudit {
 
 export async function getUserAuditHistory(userId: number): Promise<UserAudit[]> {
   return apiRequest<UserAudit[]>(`/user/audit/${userId}`);
+}
+
+
+
+export async function downloadUserTemplate(): Promise<void> {
+  const token = localStorage.getItem('hr_token');
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/user/template`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to download template.');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = 'user_template.xlsx'; // Default filename
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch.length > 1) {
+            filename = filenameMatch[1];
+        }
+    }
+    link.setAttribute('download', filename);
+
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode!.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Download error:', error);
+    throw error;
+  }
+}
+
+export async function bulkUploadUsers(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/user/bulk-upload`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
+            // Don't set Content-Type, browser does it for FormData
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, errorData.message || 'API request failed', errorData);
+    }
+
+    return await response.json();
+}
+
+export interface AttendanceRecord {
+  id: number;
+  attendance_date: string;
+  punch_in: string | null;
+  punch_out: string | null;
+  hours_worked: string | null;
+  attendance_status: "Present" | "Absent" | "Leave" | "Half-Day";
+  is_late: number;
+  is_early_departure: number;
+  short_hours: string | null;
+  first_name: string;
+  last_name: string;
+  updated_by_name: string;
+  overtime_hours: string | null;
+  overtime_status: "pending_approval" | "approved" | "rejected" | null;
+  employee_id: number;
+  rejection_reason?:string
+  overtime_processed_by?:string
+}
+
+export interface OvertimeRecord {
+    id: number;
+    attendance_record_id: number | null;
+    employee_id: number;
+    request_date: string;
+    overtime_hours: string;
+    approved_hours: string;
+    status: "pending_approval" | "approved" | "rejected";
+    overtime_type: "regular" | "holiday";
+    overtime_start: string;
+    overtime_end: string;
+    processed_by: number | null;
+    processed_at: string | null;
+    rejection_reason: string | null;
+    employee_name: string;
+}
+
+export async function getOvertimeApprovals(employee_id?:number): Promise<OvertimeRecord[]> {
+  let path = '/attendance/overtime/approvals'
+  if(employee_id){
+    path = `/attendance/overtime/approvals/${employee_id}`
+  }
+  return apiRequest<OvertimeRecord[]>(path);
+}
+
+export async function processOvertimeRequest(overtimeId: number, data: { status: 'approved' | 'rejected', approved_hours?: number, rejection_reason?: string }): Promise<void> {
+    await apiRequest(`/attendance/overtime/process/${overtimeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function editOvertimeRequest(overtimeId: number, data: Partial<OvertimeRecord>): Promise<void> {
+    await apiRequest(`/attendance/overtime/edit/${overtimeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export interface AttendanceSummary {
+    total_hours_worked: string;
+    total_short_hours: string;
+    late_days: number;
+    early_departures: number;
+    absent_days: number;
+    leave_days: number;
+    present_days: number;
+    half_days: number;
+    overtime: {
+        requested: string;
+        approved: string;
+        rejected: string;
+    };
+}
+
+
+export async function getAttendanceRecordById(recordId: number): Promise<AttendanceRecord> {
+  return apiRequest<AttendanceRecord>(`/attendance/${recordId}`);
+}
+
+export async function getAttendanceSummary(employeeId: number, year: number, month: number): Promise<AttendanceSummary> {
+  return apiRequest<AttendanceSummary>(`/attendance/summary/${employeeId}/${year}/${month}`);
+}
+
+export interface Holiday {
+  id: number;
+  name: string;
+  holiday_date: string;
+}
+
+export async function getHoliday(year: number): Promise<Holiday[]> {
+    return apiRequest<Holiday[]>(`/settings/holidays?year=${year}`);
 }

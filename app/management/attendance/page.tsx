@@ -1,3 +1,4 @@
+
 "use client";
 import { DateTime } from "luxon";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -72,21 +74,40 @@ import {
   ChevronsUpDown,
   Filter,
   ChartNoAxesColumn,
+  TrendingUp,
+  TrendingDown,
+  User,
+  Calendar,
+  Eye,
+  CheckCircle2,
+  X,
+  AlertTriangle,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import {
   getAllAttendance,
-  updateAttendancePayType,
   getShifts,
   searchUsers,
-  approveOvertime,
-  type AttendanceRecord,
-  type Shift,
-  type UserProfile,
+  getOvertimeApprovals,
+  processOvertimeRequest,
+  editOvertimeRequest,
+  getAttendanceRecordById,
+  getAttendanceSummary,
   punchIn,
   punchOut,
+  type AttendanceRecord,
+  type OvertimeRecord,
+  type AttendanceSummary,
+  type Shift,
+  type UserProfile,
+  Holiday,
+  getHoliday,
+  getHolidays,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { da } from "date-fns/locale";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const timezones = [
   "UTC",
@@ -102,18 +123,380 @@ const timezones = [
   "Australia/Sydney",
 ];
 
-/**
- * Convert local date, time, and timezone into UTC ISO string
- *
- * @param {string} date - e.g. "2025-09-03"
- * @param {string} time - e.g. "10:37:00"
- * @param {string} timezone - e.g. "Asia/Kolkata"
- * @returns {string} UTC datetime in ISO format
- */
-function convertToUTC(date: string, time: string, timezone: string) {
-  const localDateTime = DateTime.fromISO(`${date}T${time}`, { zone: timezone });
-  return localDateTime.toUTC().toISO(); // e.g. "2025-09-03T05:07:00.000Z"
-}
+// Employee Summary Dialog Component
+const EmployeeSummaryDialog = ({
+  open,
+  onOpenChange,
+  employee,
+  filters,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  employee: UserProfile | null;
+  filters: any;
+}) => {
+  const { toast } = useToast();
+  const [summary, setSummary] = useState<AttendanceSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && employee && filters.filterMode === "month") {
+      setLoading(true);
+      getAttendanceSummary(employee.id, parseInt(filters.year), parseInt(filters.month))
+        .then(setSummary)
+        .catch((error) => {
+          toast({
+            title: "Error",
+            description: `Failed to load summary: ${error.message}`,
+            variant: "destructive",
+          });
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [open, employee, filters, toast]);
+
+  if (!employee) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            {employee.first_name} {employee.last_name} - Monthly Summary
+          </DialogTitle>
+          <DialogDescription>
+            Summary for {filters.year}-{filters.month.padStart(2, '0')}
+          </DialogDescription>
+        </DialogHeader>
+        
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : summary ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="p-3">
+                <div className="text-2xl font-bold text-green-600">
+                  {summary.present_days}
+                </div>
+                <p className="text-sm text-muted-foreground">Present Days</p>
+              </Card>
+              <Card className="p-3">
+                <div className="text-2xl font-bold text-red-600">
+                  {summary.absent_days}
+                </div>
+                <p className="text-sm text-muted-foreground">Absent Days</p>
+              </Card>
+              <Card className="p-3">
+                <div className="text-2xl font-bold text-blue-600">
+                  {summary.leave_days}
+                </div>
+                <p className="text-sm text-muted-foreground">Leave Days</p>
+              </Card>
+              <Card className="p-3">
+                <div className="text-2xl font-bold text-orange-600">
+                  {summary.half_days}
+                </div>
+                <p className="text-sm text-muted-foreground">Half Days</p>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="p-4">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Working Hours
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Total Hours:</span>
+                    <span className="font-medium">{summary.total_hours_worked} hrs</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Short Hours:</span>
+                    <span className="font-medium text-red-600">{summary.total_short_hours} hrs</span>
+                  </div>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <h4 className="font-semibold mb-3 flex items-center gap-2">
+                  <Timer className="h-4 w-4" />
+                  Overtime Summary
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Requested:</span>
+                    <span className="font-medium text-blue-600">{summary.overtime.requested} hrs</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Approved:</span>
+                    <span className="font-medium text-green-600">{summary.overtime.approved} hrs</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Rejected:</span>
+                    <span className="font-medium text-red-600">{summary.overtime.rejected} hrs</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Attendance Issues
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex justify-between">
+                  <span>Late Days:</span>
+                  <span className="font-medium text-yellow-600">{summary.late_days}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Early Departures:</span>
+                  <span className="font-medium text-orange-600">{summary.early_departures}</span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+            <p>No summary data available</p>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Overtime Processing Dialog Component
+const OvertimeProcessDialog = ({
+  open,
+  onOpenChange,
+  overtime,
+  onProcessSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  overtime: OvertimeRecord | null;
+  onProcessSuccess: () => void;
+}) => {
+  const { toast } = useToast();
+  const [action, setAction] = useState<"approved" | "rejected">("approved");
+  const [approvedHours, setApprovedHours] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [attendanceRecord, setAttendanceRecord] = useState<AttendanceRecord | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (open && overtime) {
+      setApprovedHours(overtime.overtime_hours);
+      setRejectionReason("");
+      setAction("approved");
+      
+      // Fetch attendance record if it exists
+      if (overtime.attendance_record_id) {
+        setLoading(true);
+        getAttendanceRecordById(overtime.attendance_record_id)
+          .then(setAttendanceRecord)
+          .catch(() => setAttendanceRecord(null))
+          .finally(() => setLoading(false));
+      } else {
+        setAttendanceRecord(null);
+      }
+    }
+  }, [open, overtime]);
+
+  const handleProcess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!overtime) return;
+
+    try {
+      const data: any = { status: action };
+      if (action === "approved") {
+        data.approved_hours = parseFloat(approvedHours);
+      } else {
+        data.rejection_reason = rejectionReason;
+      }
+
+      await processOvertimeRequest(overtime.id, data);
+      toast({
+        title: "Success",
+        description: `Overtime request has been ${action}.`,
+      });
+      onOpenChange(false);
+      onProcessSuccess();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to process request: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!overtime) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Process Overtime Request</DialogTitle>
+          <DialogDescription>
+            Review and process overtime request for {overtime.employee_name}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Overtime Details */}
+            <Card className="p-4">
+              <h4 className="font-semibold mb-3">Overtime Details</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Request Date:</span>
+                  <p>{new Date(overtime.request_date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Type:</span>
+                  <p className="capitalize">{overtime.overtime_type}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Start Time:</span>
+                  <p>{new Date(overtime.overtime_start).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">End Time:</span>
+                  <p>{new Date(overtime.overtime_end).toLocaleString()}</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Requested Hours:</span>
+                  <p className="font-medium">{overtime.overtime_hours} hrs</p>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Record Type:</span>
+                  <p>{overtime.attendance_record_id ? "Shift Extension" : "Additional Work"}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Attendance Record Details */}
+            {attendanceRecord && (
+              <Card className="p-4">
+                <h4 className="font-semibold mb-3">Related Attendance Record</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Date:</span>
+                    <p>{new Date(attendanceRecord.attendance_date).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge className={
+                      attendanceRecord.attendance_status === "Present" ? "bg-green-100 text-green-800" :
+                      attendanceRecord.attendance_status === "Half-Day" ? "bg-orange-100 text-orange-800" :
+                      "bg-gray-100 text-gray-800"
+                    }>
+                      {attendanceRecord.attendance_status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Hours Worked:</span>
+                    <p>{attendanceRecord.hours_worked} hrs</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Flags:</span>
+                    <div className="flex gap-1">
+                      {attendanceRecord.is_late === 1 && (
+                        <Badge variant="secondary" className="text-xs">Late</Badge>
+                      )}
+                      {attendanceRecord.is_early_departure === 1 && (
+                        <Badge variant="secondary" className="text-xs">Early</Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* Processing Form */}
+            <form onSubmit={handleProcess} className="space-y-4">
+              <div className="space-y-3">
+                <Label>Action</Label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md border ${
+                      action === "approved" 
+                        ? "bg-green-50 border-green-200 text-green-800" 
+                        : "bg-white border-gray-200"
+                    }`}
+                    onClick={() => setAction("approved")}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md border ${
+                      action === "rejected" 
+                        ? "bg-red-50 border-red-200 text-red-800" 
+                        : "bg-white border-gray-200"
+                    }`}
+                    onClick={() => setAction("rejected")}
+                  >
+                    <X className="h-4 w-4" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+
+              {action === "approved" ? (
+                <div className="space-y-2">
+                  <Label htmlFor="approved-hours">Approved Hours</Label>
+                  <Input
+                    id="approved-hours"
+                    type="number"
+                    step="0.25"
+                    value={approvedHours}
+                    onChange={(e) => setApprovedHours(e.target.value)}
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                  <Textarea
+                    id="rejection-reason"
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Please provide a reason for rejection..."
+                    required
+                  />
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className={action === "approved" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}>
+                  {action === "approved" ? "Approve Request" : "Reject Request"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Punch In Dialog Component
 const PunchInDialog = ({
   open,
@@ -134,14 +517,12 @@ const PunchInDialog = ({
   const [selectedTimezone, setSelectedTimezone] = useState("Asia/Kolkata");
   const [punchInTime, setPunchInTime] = useState(() => {
     const now = new Date();
-    return now.toTimeString().slice(0, 8); // HH:MM:SS format
+    return now.toTimeString().slice(0, 8);
   });
-  const [punchInDate, setpunchInDate] = useState<string>();
+  const [punchInDate, setPunchInDate] = useState<string>();
+
   useEffect(() => {
-    const handler = setTimeout(
-      () => setDebouncedEmployeeSearch(employeeSearch),
-      500
-    );
+    const handler = setTimeout(() => setDebouncedEmployeeSearch(employeeSearch), 500);
     return () => clearTimeout(handler);
   }, [employeeSearch]);
 
@@ -168,23 +549,8 @@ const PunchInDialog = ({
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
       const timeLocal = `${punchInDate} ${punchInTime}`;
-      // console.log(punchInTime)
-      // console.log(punchInDate)
-      // const dateTime = convertToUTC(punchInDate!,punchInTime,selectedTimezone)
-
-      const requestBody = {
-        time_local: timeLocal,
-        timezone: selectedTimezone,
-        employee_id: selectedUser.id,
-      };
-
-      // console.log(dateTime)
       await punchIn(timeLocal, selectedTimezone, selectedUser.id);
-      // Replace with your actual punch-in API call
-      // await punchInEmployee(requestBody);
-      console.log("Punch In Request:", requestBody);
 
       toast({
         title: "Success",
@@ -211,21 +577,15 @@ const PunchInDialog = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Punch In Employee</DialogTitle>
-          <DialogDescription>
-            Record punch-in time for an employee.
-          </DialogDescription>
+          <DialogDescription>Record punch-in time for an employee.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handlePunchIn} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Employee</Label>
-            <Popover
-              open={isEmployeePopoverOpen}
-              onOpenChange={setIsEmployeePopoverOpen}
-            >
+            <Popover open={isEmployeePopoverOpen} onOpenChange={setIsEmployeePopoverOpen}>
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  role="button"
                   className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                 >
                   {selectedUser
@@ -236,10 +596,7 @@ const PunchInDialog = ({
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput
-                    placeholder="Search employee..."
-                    onValueChange={setEmployeeSearch}
-                  />
+                  <CommandInput placeholder="Search employee..." onValueChange={setEmployeeSearch} />
                   <CommandList>
                     <CommandEmpty>
                       {isSearching ? "Searching..." : "No employee found."}
@@ -266,10 +623,7 @@ const PunchInDialog = ({
 
           <div className="space-y-2">
             <Label>Timezone</Label>
-            <Select
-              value={selectedTimezone}
-              onValueChange={setSelectedTimezone}
-            >
+            <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -284,6 +638,16 @@ const PunchInDialog = ({
           </div>
 
           <div className="space-y-2">
+            <Label>Date</Label>
+            <Input
+              type="date"
+              value={punchInDate}
+              onChange={(e) => setPunchInDate(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label>Punch In Time</Label>
             <Input
               type="time"
@@ -293,23 +657,9 @@ const PunchInDialog = ({
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label>Punch In Date</Label>
-            <Input
-              type="date"
-              step="1"
-              value={punchInDate}
-              onChange={(e) => setpunchInDate(e.target.value)}
-              required
-            />
-          </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit">Punch In</Button>
@@ -337,7 +687,7 @@ const PunchOutDialog = ({
   const [punchOutDate, setPunchOutDate] = useState<string>();
   const [punchOutTime, setPunchOutTime] = useState(() => {
     const now = new Date();
-    return now.toTimeString().slice(0, 8); // HH:MM:SS format
+    return now.toTimeString().slice(0, 8);
   });
 
   const handlePunchOut = async (e: React.FormEvent) => {
@@ -345,21 +695,8 @@ const PunchOutDialog = ({
     if (!record) return;
 
     try {
-      const today = new Date(record.attendance_date)
-        .toISOString()
-        .split("T")[0];
       const timeLocal = `${punchOutDate} ${punchOutTime}`;
-
-      const requestBody = {
-        time_local: timeLocal,
-        timezone: selectedTimezone,
-        employee_id: record.employee_id,
-      };
-
       await punchOut(timeLocal, selectedTimezone, record.employee_id);
-      // Replace with your actual punch-out API call
-      // await punchOutEmployee(requestBody);
-      // console.log('Punch Out Request:', requestBody);
 
       toast({
         title: "Success",
@@ -368,7 +705,6 @@ const PunchOutDialog = ({
       onOpenChange(false);
       onPunchOutSuccess();
 
-      // Reset form
       setPunchOutTime(new Date().toTimeString().slice(0, 8));
     } catch (error: any) {
       toast({
@@ -385,20 +721,14 @@ const PunchOutDialog = ({
         <DialogHeader>
           <DialogTitle>Punch Out Employee</DialogTitle>
           <DialogDescription>
-            Record punch-out time for {record?.first_name} {record?.last_name}{" "}
-            on{" "}
-            {record
-              ? new Date(record.attendance_date).toLocaleDateString()
-              : ""}
+            Record punch-out time for {record?.first_name} {record?.last_name} on{" "}
+            {record ? new Date(record.attendance_date).toLocaleDateString() : ""}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handlePunchOut} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label>Timezone</Label>
-            <Select
-              value={selectedTimezone}
-              onValueChange={setSelectedTimezone}
-            >
+            <Select value={selectedTimezone} onValueChange={setSelectedTimezone}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -434,11 +764,7 @@ const PunchOutDialog = ({
           </div>
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit">Punch Out</Button>
@@ -453,25 +779,25 @@ export default function AttendanceRecordsPage() {
   const { hasPermission } = useAuth();
   const { toast } = useToast();
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
+  const [overtimeRecords, setOvertimeRecords] = useState<OvertimeRecord[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPunchInDialogOpen, setIsPunchInDialogOpen] = useState(false);
   const [isPunchOutDialogOpen, setIsPunchOutDialogOpen] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(
-    null
-  );
-  const [newPayType, setNewPayType] = useState<string>("");
+  const [isOvertimeDialogOpen, setIsOvertimeDialogOpen] = useState(false);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<AttendanceRecord | null>(null);
+  const [selectedOvertime, setSelectedOvertime] = useState<OvertimeRecord | null>(null);
   const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null);
 
   const [employeeSearch, setEmployeeSearch] = useState("");
   const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] = useState("");
   const [searchedUsers, setSearchedUsers] = useState<UserProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<UserProfile | null>(
-    null
-  );
+  const [selectedEmployee, setSelectedEmployee] = useState<UserProfile | null>(null);
+  const [holidays,setHolidays] = useState<Map<any,any>>()
+  
 
   const [apiFilters, setApiFilters] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -487,11 +813,18 @@ export default function AttendanceRecordsPage() {
 
   const canManageAttendance = hasPermission("attendance.manage");
 
+  const holidaysMap = ()=>{
+    const holidayMap = new Map()
+    getHolidays(apiFilters.filterMode==='date'?new Date(apiFilters.date).getFullYear():parseInt(apiFilters.year)).then((data)=>{
+      data.forEach((holiday)=>{
+        holidayMap.set(new Date(holiday.holiday_date).toISOString().split('T')[0],holiday.name)
+      })
+    })
+    setHolidays(holidayMap)
+  }
+
   useEffect(() => {
-    const handler = setTimeout(
-      () => setDebouncedEmployeeSearch(employeeSearch),
-      500
-    );
+    const handler = setTimeout(() => setDebouncedEmployeeSearch(employeeSearch), 500);
     return () => clearTimeout(handler);
   }, [employeeSearch]);
 
@@ -499,16 +832,17 @@ export default function AttendanceRecordsPage() {
     if (debouncedEmployeeSearch) {
       setIsSearching(true);
       searchUsers(debouncedEmployeeSearch)
-        .then((e) => {
-          setSearchedUsers(e);
-        })
+        .then(setSearchedUsers)
         .finally(() => setIsSearching(false));
     } else {
       setSearchedUsers([]);
     }
   }, [debouncedEmployeeSearch]);
 
+  
+
   useEffect(() => {
+
     const savedTimezone = localStorage.getItem("selectedTimezone") || "UTC";
     if (savedTimezone && timezones.includes(savedTimezone)) {
       setSelectedTimezone(savedTimezone);
@@ -533,7 +867,9 @@ export default function AttendanceRecordsPage() {
   }, [canManageAttendance, toast]);
 
   useEffect(() => {
-    localStorage.setItem("attendanceTimezone", selectedTimezone!);
+    if (selectedTimezone) {
+      localStorage.setItem("attendanceTimezone", selectedTimezone);
+    }
   }, [selectedTimezone]);
 
   const fetchRecords = useCallback(
@@ -555,7 +891,7 @@ export default function AttendanceRecordsPage() {
 
       try {
         const data = await getAllAttendance(params);
-        setHasMore(data.length === 20);
+        setHasMore(data.length === 250);
         setAllRecords((prev) => (isLoadMore ? [...prev, ...data] : data));
         if (isLoadMore) setPage(currentPage);
       } catch (error: any) {
@@ -571,154 +907,86 @@ export default function AttendanceRecordsPage() {
     [canManageAttendance, apiFilters, page, toast]
   );
 
+  const fetchOvertimeRecords = useCallback(async () => {
+    if (!canManageAttendance) return;
+    
+    try {
+      let data;
+      if(apiFilters.employee_id!=undefined){
+
+        data = await getOvertimeApprovals(apiFilters.employee_id);
+      }
+      else{
+        data = await getOvertimeApprovals();
+      }
+      setOvertimeRecords(data);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Could not fetch overtime records: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  }, [canManageAttendance, toast,apiFilters]);
+
   useEffect(() => {
     setAllRecords([]);
     setPage(1);
     fetchRecords();
+    fetchOvertimeRecords();
+    holidaysMap()
   }, [apiFilters]);
 
-  const overtimeRequests = useMemo(
-    () =>
-      allRecords.filter(
-        (r) => r.pay_type === "overtime" && r.overtime_status === null
-      ),
-    [allRecords]
+  const pendingOvertimeRecords = useMemo(
+    () => overtimeRecords.filter((r) => r.status === "pending_approval"),
+    [overtimeRecords]
   );
-  const actionRequiredRecords = useMemo(
-    () => allRecords.filter((r) => r.pay_type === "no_punch_out"),
-    [allRecords]
-  );
+
   const noPunchOutRecords = useMemo(
-    () => allRecords.filter((r) => !r.punch_out && (r.attendance_status==="present" || r.attendance_status==="late")),
+    () => allRecords.filter((r) => !r.punch_out && (r.attendance_status === "Present" || r.attendance_status === "Half-Day")),
     [allRecords]
   );
+
   const metrics = useMemo(
     () =>
       allRecords.reduce(
         (acc, record) => {
-          acc[record.attendance_status] =
-            (acc[record.attendance_status] || 0) + 1;
+          acc[record.attendance_status] = (acc[record.attendance_status] || 0) + 1;
+          if (record.is_late === 1) acc.late_count++;
+          if (record.is_early_departure === 1) acc.early_departure_count++;
+          if (record.overtime_hours && parseFloat(record.overtime_hours) > 0) {
+            acc.overtime_requests++;
+            if (record.overtime_status === "pending_approval") acc.pending_overtime++;
+          }
           return acc;
         },
-        { present: 0, late: 0, absent: 0, leave: 0 } as Record<string, number>
+        { 
+          Present: 0, 
+          Absent: 0, 
+          Leave: 0, 
+          "Half-Day": 0,
+          late_count: 0,
+          early_departure_count: 0,
+          overtime_requests: 0,
+          pending_overtime: 0
+        } as Record<string, number>
       ),
     [allRecords]
   );
-
-  const handleEditClick = (record: AttendanceRecord) => {
-    setSelectedRecord(record);
-    setNewPayType(record.pay_type);
-    setIsEditDialogOpen(true);
-  };
 
   const handlePunchOutClick = (record: AttendanceRecord) => {
     setSelectedRecord(record);
     setIsPunchOutDialogOpen(true);
   };
 
-  const handleSaveChanges = async () => {
-    if (!selectedRecord || !newPayType) return;
-    try {
-      await updateAttendancePayType(selectedRecord.id, newPayType as any);
-      toast({
-        title: "Success",
-        description: "Pay type updated successfully.",
-      });
-      setIsEditDialogOpen(false);
-      fetchRecords();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to update pay type: ${error.message}`,
-        variant: "destructive",
-      });
-    }
+  const handleOvertimeClick = (overtime: OvertimeRecord) => {
+    setSelectedOvertime(overtime);
+    setIsOvertimeDialogOpen(true);
   };
 
-  const handleApproveOvertime = async (recordId: number) => {
-    try {
-      await approveOvertime(recordId, 1);
-      toast({ title: "Success", description: "Overtime has been approved." });
-      fetchRecords();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to approve overtime: ${error.message}`,
-        variant: "destructive",
-      });
-    }
-  };
-
-  type StatusKey =
-    | "present"
-    | "absent"
-    | "late"
-    | "leave"
-    | "no_punch_out"
-    | "overtime"
-    | "half_day"
-    | "unpaid"
-    | "full_day";
-  const statusMap: Record<
-    StatusKey,
-    { icon: React.ComponentType<any>; color: string; label: string }
-  > = {
-    present: {
-      icon: CheckCircle,
-      color: "bg-green-100 text-green-800",
-      label: "Present",
-    },
-    full_day: {
-      icon: CheckCircle,
-      color: "bg-green-100 text-green-800",
-      label: "Full Day",
-    },
-    absent: {
-      icon: XCircle,
-      color: "bg-red-100 text-red-800",
-      label: "Absent",
-    },
-    late: {
-      icon: Clock,
-      color: "bg-yellow-100 text-yellow-800",
-      label: "Late",
-    },
-    leave: {
-      icon: CalendarDays,
-      color: "bg-blue-100 text-blue-800",
-      label: "On Leave",
-    },
-    no_punch_out: {
-      icon: LogOut,
-      color: "bg-red-200 text-red-900",
-      label: "No Punch Out",
-    },
-    overtime: {
-      icon: Timer,
-      color: "bg-indigo-100 text-indigo-800",
-      label: "Overtime",
-    },
-    half_day: {
-      icon: BarChart,
-      color: "bg-orange-100 text-orange-800",
-      label: "Half Day",
-    },
-    unpaid: {
-      icon: UserX,
-      color: "bg-gray-200 text-gray-800",
-      label: "Unpaid",
-    },
-  };
-
-  const getStatusBadge = (status: string) => {
-    const map = statusMap[status as StatusKey];
-    const Icon = map?.icon || Clock;
-    return (
-      <Badge className={map?.color || "bg-gray-100 text-gray-800"}>
-        <Icon className="h-3 w-3 mr-1" />
-        {map?.label || status}
-      </Badge>
-    );
+  const handleViewSummary = (employee: UserProfile) => {
+    setSelectedEmployee(employee);
+    setIsSummaryDialogOpen(true);
   };
 
   const formatTime = (timeString: string | null) => {
@@ -731,10 +999,122 @@ export default function AttendanceRecordsPage() {
     });
   };
 
-  const renderTable = (
-    recordsToRender: AttendanceRecord[],
-    type: "all" | "overtime" | "action" | "punchout" = "all"
-  ) => {
+  const getStatusBadge = (status: string, isLate = false, isEarlyDeparture = false,isHoliday=false,holiday_name="") => {
+    let className = "";
+    let icon = CheckCircle;
+    
+    switch (status) {
+      case "Present":
+        className = "bg-green-100 text-green-800";
+        icon = CheckCircle;
+        break;
+      case "Half-Day":
+        className = "bg-orange-100 text-orange-800";
+        icon = BarChart;
+        break;
+      case "Absent":
+        className = "bg-red-100 text-red-800";
+        icon = XCircle;
+        break;
+      case "Leave":
+        className = "bg-blue-100 text-blue-800";
+        icon = CalendarDays;
+        break;
+      default:
+        className = "bg-gray-100 text-gray-800";
+        icon = Clock;
+    }
+
+    const Icon = icon;
+    return (
+      <div className="flex items-center gap-1">
+        <Badge className={className}>
+          <Icon className="h-3 w-3 mr-1" />
+          {status}
+        </Badge>
+        {isLate && (
+          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+            <Clock className="h-3 w-3 mr-1" />
+            Late
+          </Badge>
+        )}
+        {isEarlyDeparture && (
+          <Badge variant="secondary" className="bg-orange-100 text-orange-800 text-xs">
+            <TrendingDown className="h-3 w-3 mr-1" />
+            Early
+          </Badge>
+        )}
+        {isHoliday && (
+        <div className="flex items-center gap-1">
+          <Badge
+            variant="secondary"
+            className="bg-purple-300 text-black text-xs"
+          >
+            <Icon className="h-3 w-3 mr-1" />
+            Holiday
+          </Badge>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-gray-600 hover:text-black cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent className="text-sm">
+                {holiday_name || "No holiday name provided"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
+      </div>
+    );
+  };
+
+  const getOvertimeBadge = (overtime_hours: string | null, overtime_status: string | null,overtime_processed_by="",rejection_reason="") => {
+    if (!overtime_hours || parseFloat(overtime_hours) <= 0) return null;
+
+    let className = "";
+    let label = "";
+    
+    switch (overtime_status) {
+      case "pending_approval":
+        className = "bg-yellow-100 text-yellow-800 border-yellow-200";
+        label = "Pending";
+        break;
+      case "approved":
+        className = "bg-green-100 text-green-800 border-green-200";
+        label = "Approved";
+        break;
+      case "rejected":
+        className = "bg-red-100 text-red-800 border-red-200";
+        label = "Rejected";
+        break;
+      default:
+        className = "bg-blue-100 text-blue-800 border-blue-200";
+        label = "Overtime";
+    }
+
+    return (
+      <div className="flex items-center gap-1">
+        <Badge className={`${className} border cursor-pointer hover:opacity-80`}>
+          <Timer className="h-3 w-3 mr-1" />
+          {parseFloat(overtime_hours).toFixed(2)}h {label}
+        </Badge>
+        {label !=='Pending' && <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-gray-600 hover:text-black cursor-pointer" />
+              </TooltipTrigger>
+              <TooltipContent className="text-sm whitespace-pre-line">
+                {label==="Approved"?`Approved By : ${overtime_processed_by}`:`${rejection_reason}\nBy:- ${overtime_processed_by}`}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>}
+      </div>
+      
+    );
+  };
+
+  const renderAttendanceTable = (recordsToRender: AttendanceRecord[]) => {
     if (recordsToRender.length === 0 && !loading) {
       return (
         <div className="text-center py-12 text-muted-foreground">
@@ -744,6 +1124,7 @@ export default function AttendanceRecordsPage() {
         </div>
       );
     }
+
     return (
       <Table>
         <TableHeader>
@@ -751,73 +1132,106 @@ export default function AttendanceRecordsPage() {
             <TableHead>Employee</TableHead>
             <TableHead>Date</TableHead>
             <TableHead>Timings ({selectedTimezone})</TableHead>
-            <TableHead>Hours</TableHead>
+            <TableHead>Hours Worked</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Pay Status</TableHead>
+            <TableHead>Overtime</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {recordsToRender.map((record) => {
             const isNoPunchOut = !record.punch_out;
+            const overtimeBadge = getOvertimeBadge(record.overtime_hours, record.overtime_status,record.overtime_processed_by,record.rejection_reason);
+            
             return (
               <TableRow key={record.id}>
                 <TableCell>
-                  <Link
-                    href={`/directory/${record.employee_id}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {record.first_name} {record.last_name}
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/directory/${record.employee_id}`}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      {record.first_name} {record.last_name}
+                    </Link>
+                    {apiFilters.filterMode === "month" && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                        onClick={() => handleViewSummary({ 
+                          id: record.employee_id, 
+                          first_name: record.first_name, 
+                          last_name: record.last_name 
+                        } as UserProfile)}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
                 <TableCell>
-                  {new Date(record.attendance_date)
-                    .toLocaleDateString("en-GB")
-                    .replace(/\//g, "-")}
+                  {new Date(record.attendance_date).toLocaleDateString("en-GB").replace(/\//g, "-")}
                 </TableCell>
-
                 <TableCell>
-                  {formatTime(record.punch_in)} / {formatTime(record.punch_out)}
-                  {isNoPunchOut && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      No Punch Out
-                    </Badge>
+                  <div className="space-y-1">
+                    <div>
+                      {formatTime(record.punch_in)} / {formatTime(record.punch_out)}
+                    </div>
+                    {isNoPunchOut && (
+                      <Badge variant="secondary" className="text-xs">
+                        No Punch Out
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {parseFloat(record.hours_worked || "0").toFixed(2)} hrs
+                    </div>
+                    {record.short_hours && parseFloat(record.short_hours) > 0 && (
+                      <div className="text-xs text-red-600">
+                        Short: {parseFloat(record.short_hours).toFixed(2)}h
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  {getStatusBadge(
+                    record.attendance_status, 
+                    record.is_late === 1, 
+                    record.is_early_departure === 1,
+                    new Date(record.attendance_date).getDay() === 0 || holidays?.get(new Date(record.attendance_date).toISOString().split('T')[0]),
+                    new Date(record.attendance_date).getDay() === 0 ? "Sunday" : holidays?.get(new Date(record.attendance_date).toISOString().split('T')[0])
                   )}
                 </TableCell>
                 <TableCell>
-                  {parseFloat(record.hours_worked || "0").toFixed(2)} hrs
+                  {overtimeBadge || "-"}
                 </TableCell>
-                <TableCell>
-                  {getStatusBadge(record.attendance_status)}
-                </TableCell>
-                <TableCell>{getStatusBadge(record.pay_type)}</TableCell>
                 <TableCell className="text-right">
                   <div className="flex gap-2 justify-end">
-                    {type === "overtime" ? (
-                      <Button
-                        size="sm"
-                        onClick={() => handleApproveOvertime(record.id)}
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" /> Approve
-                      </Button>
-                    ) : (type === "punchout" || isNoPunchOut) &&
-                      record.attendance_status != "absent" &&
-                      record.attendance_status != "leave" ? (
+                    {isNoPunchOut && 
+                     record.attendance_status !== "Absent" && 
+                     record.attendance_status !== "Leave" ? (
                       <Button
                         size="sm"
                         variant="outline"
                         className="border-orange-400 text-orange-600 hover:bg-orange-50"
                         onClick={() => handlePunchOutClick(record)}
                       >
-                        <LogOut className="h-4 w-4 mr-2" /> Punch Out
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Punch Out
                       </Button>
                     ) : (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleEditClick(record)}
+                        onClick={() => {
+                          // Edit functionality can be added here
+                        }}
                       >
-                        <Edit className="h-4 w-4 mr-2" /> Edit
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       </Button>
                     )}
                   </div>
@@ -825,6 +1239,105 @@ export default function AttendanceRecordsPage() {
               </TableRow>
             );
           })}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  const renderOvertimeTable = (overtimeRecords: OvertimeRecord[]) => {
+    if (overtimeRecords.length === 0) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          <Timer className="h-12 w-12 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold">No Overtime Requests</h3>
+          <p>There are no pending overtime requests.</p>
+        </div>
+      );
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Employee</TableHead>
+            <TableHead>Request Date</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Duration</TableHead>
+            <TableHead>Hours</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {overtimeRecords.map((overtime) => (
+            <TableRow key={overtime.id}>
+              <TableCell>
+                <div className="font-medium flex gap-2.5 hover:underline">
+                  <Link href={`/directory/${overtime.employee_id}`}>{overtime.employee_name}</Link>
+                  <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:cursor-pointer"
+                        onClick={() => handleViewSummary({ 
+                          id: overtime.employee_id, 
+                          first_name: overtime.employee_name
+                        } as UserProfile)}
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                </div>
+                
+              </TableCell>
+              <TableCell>
+                {new Date(overtime.request_date).toLocaleDateString("en-GB")}
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary" className="capitalize">
+                  {overtime.overtime_type}
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <div className="text-sm">
+                  <div>{new Date(overtime.overtime_start).toLocaleString()}</div>
+                  <div className="text-muted-foreground">
+                    to {new Date(overtime.overtime_end).toLocaleString()}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="font-medium">{overtime.overtime_hours} hrs</div>
+                {overtime.approved_hours && parseFloat(overtime.approved_hours) > 0 && (
+                  <div className="text-xs text-green-600">
+                    Approved: {overtime.approved_hours}h
+                  </div>
+                )}
+              </TableCell>
+              <TableCell>
+                <Badge 
+                  className={
+                    overtime.status === "pending_approval" 
+                      ? "bg-yellow-100 text-yellow-800"
+                      : overtime.status === "approved"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-red-100 text-red-800"
+                  }
+                >
+                  {overtime.status.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                {overtime.status === "pending_approval" && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleOvertimeClick(overtime)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Process
+                  </Button>
+                )}
+              </TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     );
@@ -839,10 +1352,7 @@ export default function AttendanceRecordsPage() {
             <h1 className="text-3xl font-bold">Attendance Records</h1>
           </div>
           <div className="flex items-center gap-4">
-            <Select
-              value={selectedTimezone!}
-              onValueChange={setSelectedTimezone}
-            >
+            <Select value={selectedTimezone!} onValueChange={setSelectedTimezone}>
               <SelectTrigger className="w-[180px]">
                 <Globe className="h-4 w-4 mr-2" />
                 <SelectValue />
@@ -879,7 +1389,12 @@ export default function AttendanceRecordsPage() {
                   <CheckCircle className="h-4 w-4 text-green-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.present}</div>
+                  <div className="text-2xl font-bold">{metrics.Present || 0}</div>
+                  {metrics.late_count > 0 && (
+                    <p className="text-xs text-yellow-600 mt-1">
+                      {metrics.late_count} late arrivals
+                    </p>
+                  )}
                 </CardContent>
               </Card>
               <Card>
@@ -888,44 +1403,48 @@ export default function AttendanceRecordsPage() {
                   <XCircle className="h-4 w-4 text-red-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.absent}</div>
+                  <div className="text-2xl font-bold">{metrics.Absent || 0}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    On Leave
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">On Leave</CardTitle>
                   <CalendarDays className="h-4 w-4 text-blue-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.leave}</div>
+                  <div className="text-2xl font-bold">{metrics.Leave || 0}</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Late</CardTitle>
-                  <Clock className="h-4 w-4 text-yellow-500" />
+                  <CardTitle className="text-sm font-medium">Half Day</CardTitle>
+                  <BarChart className="h-4 w-4 text-orange-500" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{metrics.late}</div>
+                  <div className="text-2xl font-bold">{metrics["Half-Day"] || 0}</div>
+                  {metrics.early_departure_count > 0 && (
+                    <p className="text-xs text-orange-600 mt-1">
+                      {metrics.early_departure_count} early departures
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader>
-                <CardTitle>Global Filters</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Filter className="h-5 w-5" />
+                  Filters
+                </CardTitle>
                 <CardDescription>
-                  Apply filters to fetch new records from the server.
+                  Apply filters to fetch records from the server.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                   <div className="flex items-center gap-2 p-2 border rounded-md justify-center">
-                    <Label htmlFor="filter-mode" className="text-sm">
-                      Date
-                    </Label>
+                    <Label htmlFor="filter-mode" className="text-sm">Date</Label>
                     <Switch
                       id="filter-mode"
                       checked={apiFilters.filterMode === "month"}
@@ -936,9 +1455,7 @@ export default function AttendanceRecordsPage() {
                         }))
                       }
                     />
-                    <Label htmlFor="filter-mode" className="text-sm">
-                      Month
-                    </Label>
+                    <Label htmlFor="filter-mode" className="text-sm">Month</Label>
                   </div>
                   {apiFilters.filterMode === "date" ? (
                     <div>
@@ -957,13 +1474,12 @@ export default function AttendanceRecordsPage() {
                         <Label>Month</Label>
                         <Input
                           type="number"
+                          min="1"
+                          max="12"
                           placeholder="MM"
                           value={apiFilters.month}
                           onChange={(e) =>
-                            setApiFilters((f) => ({
-                              ...f,
-                              month: e.target.value,
-                            }))
+                            setApiFilters((f) => ({ ...f, month: e.target.value }))
                           }
                         />
                       </div>
@@ -974,10 +1490,7 @@ export default function AttendanceRecordsPage() {
                           placeholder="YYYY"
                           value={apiFilters.year}
                           onChange={(e) =>
-                            setApiFilters((f) => ({
-                              ...f,
-                              year: e.target.value,
-                            }))
+                            setApiFilters((f) => ({ ...f, year: e.target.value }))
                           }
                         />
                       </div>
@@ -992,58 +1505,43 @@ export default function AttendanceRecordsPage() {
                         <button className="w-full flex items-center justify-between rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                           {selectedEmployee
                             ? `${selectedEmployee.first_name} ${selectedEmployee.last_name}`
-                            : "Select employee"}
+                            : "All employees"}
                           <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent
-                        className="w-[300px] p-0 rounded-xl shadow-lg border"
-                        align="start"
-                        sideOffset={6}
-                      >
-                        <Command className="rounded-xl">
+                      <PopoverContent className="w-[300px] p-0" align="start">
+                        <Command>
                           <CommandInput
                             placeholder="Search by name or id..."
                             value={employeeSearch}
                             onValueChange={setEmployeeSearch}
-                            className="px-3 py-2 text-sm border-b focus:ring-0 focus:outline-none"
                           />
-                          <CommandList className="max-h-64 overflow-y-auto">
-                            {!isSearching &&
-                            debouncedEmployeeSearch &&
-                            searchedUsers.length === 0 ? (
-                              <CommandEmpty>No users found.</CommandEmpty>
-                            ) : (
-                              <CommandGroup heading="Employees">
+                          <CommandList className="max-h-64">
+                            <CommandEmpty>
+                              {isSearching ? "Searching..." : "No users found."}
+                            </CommandEmpty>
+                            <CommandGroup>
+                              <CommandItem
+                                onSelect={() => {
+                                  setSelectedEmployee(null);
+                                  setApiFilters((f) => ({ ...f, employee_id: undefined }));
+                                }}
+                              >
+                                All Employees
+                              </CommandItem>
+                              {searchedUsers.map((user) => (
                                 <CommandItem
+                                  key={user.id}
+                                  value={`${user.first_name} ${user.last_name} ${user.id}`}
                                   onSelect={() => {
-                                    setSelectedEmployee(null);
-                                    setApiFilters((f) => ({
-                                      ...f,
-                                      employee_id: undefined,
-                                    }));
+                                    setSelectedEmployee(user);
+                                    setApiFilters((f) => ({ ...f, employee_id: user.id }));
                                   }}
                                 >
-                                  All Employees
+                                  {user.first_name} {user.last_name} (#{user.id})
                                 </CommandItem>
-                                {searchedUsers.map((user) => (
-                                  <CommandItem
-                                    key={user.id}
-                                    value={`${user.first_name} ${user.last_name} ${user.id}`}
-                                    onSelect={() => {
-                                      setSelectedEmployee(user);
-                                      setApiFilters((f) => ({
-                                        ...f,
-                                        employee_id: user.id,
-                                      }));
-                                    }}
-                                  >
-                                    {user.first_name} {user.last_name} (#
-                                    {user.id})
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            )}
+                              ))}
+                            </CommandGroup>
                           </CommandList>
                         </Command>
                       </PopoverContent>
@@ -1066,10 +1564,7 @@ export default function AttendanceRecordsPage() {
                       <SelectContent>
                         <SelectItem value="all">All Shifts</SelectItem>
                         {shifts.map((shift) => (
-                          <SelectItem
-                            key={shift.id}
-                            value={shift.id.toString()}
-                          >
+                          <SelectItem key={shift.id} value={shift.id.toString()}>
                             {shift.name}
                           </SelectItem>
                         ))}
@@ -1080,29 +1575,25 @@ export default function AttendanceRecordsPage() {
               </CardContent>
             </Card>
 
-            <Tabs defaultValue="all">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="all">
-                  All Records ({allRecords.length})
+            <Tabs defaultValue="attendance">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="attendance">
+                  Attendance Records ({allRecords.length})
+                </TabsTrigger>
+                <TabsTrigger value="overtime">
+                  Overtime Requests
+                  <Badge className="ml-2">{pendingOvertimeRecords.length}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="punchout">
                   Pending Punch Out
                   <Badge className="ml-2">{noPunchOutRecords.length}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="overtime">
-                  Overtime Requests
-                  <Badge className="ml-2">{overtimeRequests.length}</Badge>
-                </TabsTrigger>
-                <TabsTrigger value="actions">
-                  Action Required
-                  <Badge className="ml-2">{actionRequiredRecords.length}</Badge>
-                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="all">
+              <TabsContent value="attendance">
                 <Card>
                   <CardContent className="pt-6">
-                    {renderTable(allRecords, "all")}
+                    {renderAttendanceTable(allRecords)}
                   </CardContent>
                   {hasMore && (
                     <CardFooter>
@@ -1118,59 +1609,48 @@ export default function AttendanceRecordsPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="punchout">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pending Punch Out</CardTitle>
-                    <CardDescription>
-                      These employees haven't punched out yet. Click "Punch Out"
-                      to record their exit time.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {renderTable(noPunchOutRecords, "punchout")}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
               <TabsContent value="overtime">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Overtime Requests</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <Timer className="h-5 w-5" />
+                      Overtime Requests
+                    </CardTitle>
                     <CardDescription>
-                      Approve these records for overtime pay.
+                      Review and process overtime requests from employees.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {renderTable(overtimeRequests, "overtime")}
+                    {renderOvertimeTable(pendingOvertimeRecords)}
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="actions">
+              <TabsContent value="punchout">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Action Required</CardTitle>
+                    <CardTitle className="flex items-center gap-2">
+                      <LogOut className="h-5 w-5" />
+                      Pending Punch Out
+                    </CardTitle>
                     <CardDescription>
-                      These records have a 'No Punch Out' status. Please edit
-                      them to set the correct pay type.
+                      These employees haven't punched out yet. Click "Punch Out" to record their exit time.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {renderTable(actionRequiredRecords, "action")}
+                    {renderAttendanceTable(noPunchOutRecords)}
                   </CardContent>
                 </Card>
               </TabsContent>
             </Tabs>
 
-            {/* Punch In Dialog */}
+            {/* Dialogs */}
             <PunchInDialog
               open={isPunchInDialogOpen}
               onOpenChange={setIsPunchInDialogOpen}
               onPunchInSuccess={fetchRecords}
             />
 
-            {/* Punch Out Dialog */}
             <PunchOutDialog
               open={isPunchOutDialogOpen}
               onOpenChange={setIsPunchOutDialogOpen}
@@ -1178,46 +1658,22 @@ export default function AttendanceRecordsPage() {
               onPunchOutSuccess={fetchRecords}
             />
 
-            {/* Edit Pay Type Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit Pay Type</DialogTitle>
-                  <DialogDescription>
-                    Update the pay status for {selectedRecord?.first_name}{" "}
-                    {selectedRecord?.last_name} for{" "}
-                    {selectedRecord
-                      ? new Date(
-                          selectedRecord.attendance_date
-                        ).toLocaleDateString()
-                      : ""}
-                    .
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4">
-                  <Label htmlFor="pay-type-select">Pay Type</Label>
-                  <Select value={newPayType} onValueChange={setNewPayType}>
-                    <SelectTrigger id="pay-type-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="full_day">Full Day</SelectItem>
-                      <SelectItem value="half_day">Half Day</SelectItem>
-                      <SelectItem value="unpaid">Unpaid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsEditDialogOpen(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSaveChanges}>Save Changes</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <OvertimeProcessDialog
+              open={isOvertimeDialogOpen}
+              onOpenChange={setIsOvertimeDialogOpen}
+              overtime={selectedOvertime}
+              onProcessSuccess={() => {
+                fetchRecords();
+                fetchOvertimeRecords();
+              }}
+            />
+
+            <EmployeeSummaryDialog
+              open={isSummaryDialogOpen}
+              onOpenChange={setIsSummaryDialogOpen}
+              employee={selectedEmployee}
+              filters={apiFilters}
+            />
           </>
         )}
       </div>
