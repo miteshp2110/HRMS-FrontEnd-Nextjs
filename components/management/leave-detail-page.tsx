@@ -190,10 +190,13 @@ export function LeaveDetailPage({ leaveId }: LeaveDetailPageProps) {
              </CardContent>
           </Card>
            <Card>
-            <CardHeader><CardTitle>Approval Status</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Approval Status {getStatusBadge(getStatusFromRecord(leave))}</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-                <p><strong>Primary Approver:</strong> {leave.primary_approver_name} ({leave.primary_status ? "Approved" : "Pending"})</p>
-                <p><strong>Secondary Approver:</strong> {leave.secondary_approver_name} ({leave.secondry_status ? "Approved" : "Pending"})</p>
+                <p><strong>Primary Approver:</strong> {leave.primary_approver_name} ({leave.primary_status == null ? "Pending" : leave.primary_status == 0?"Rejected":"Accepted"})</p>
+                <p><strong>Secondary Approver:</strong> {leave.secondary_approver_name} ({leave.secondry_status == null ? "Pending" : leave.secondry_status == 0?"Rejected":"Accepted"})</p>
+                {getStatusFromRecord(leave) === 'rejected' && 
+                  <p><strong>Rejection Reason:</strong> {leave.rejection_reason}</p>
+                }
             </CardContent>
           </Card>
           <Card>
