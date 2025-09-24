@@ -108,6 +108,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { da } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { BulkAttendanceDialog } from "@/components/management/bulk-attendance-dialog";
 
 const timezones = [
   "UTC",
@@ -341,7 +342,7 @@ const OvertimeProcessDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-x-scroll">
         <DialogHeader>
           <DialogTitle>Process Overtime Request</DialogTitle>
           <DialogDescription>
@@ -797,6 +798,7 @@ export default function AttendanceRecordsPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<UserProfile | null>(null);
   const [holidays,setHolidays] = useState<Map<any,any>>()
+  const [isBulkAttendanceOpen, setIsBulkAttendanceOpen] = useState(false);
   
 
   const [apiFilters, setApiFilters] = useState({
@@ -1365,6 +1367,7 @@ export default function AttendanceRecordsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Button onClick={() => setIsBulkAttendanceOpen(true)}>Bulk Attendance</Button>
             <Button onClick={() => setIsPunchInDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Punch In
@@ -1645,6 +1648,12 @@ export default function AttendanceRecordsPage() {
             </Tabs>
 
             {/* Dialogs */}
+            <BulkAttendanceDialog
+            open={isBulkAttendanceOpen}
+            onOpenChange={setIsBulkAttendanceOpen}
+            shifts={shifts}
+            onSuccess={fetchRecords}
+            />
             <PunchInDialog
               open={isPunchInDialogOpen}
               onOpenChange={setIsPunchInDialogOpen}

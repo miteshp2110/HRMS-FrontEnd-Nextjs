@@ -1,3 +1,13 @@
+
+interface ApiWorkWeekDay {
+  id?: number;
+  day_of_week: string;
+  is_working_day: number | boolean; // Support both number and boolean
+  created_at?: string;
+  updated_at?: string;
+  updated_by?: string | null;
+}
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -39,18 +49,21 @@ import {
   Info,
   XCircle,
   Clock,
+  Download,
 } from "lucide-react";
 import {
   getPrimaryLeaveApprovals,
   getSecondaryLeaveApprovals,
   getApprovalHistory,
-  approvePrimaryLeave,
-  approveSecondaryLeave,
+  downloadLeaveApplication,
   type LeaveRecord,
   LeaveRecordHistory,
+  getHolidays,
+  getWorkWeek,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { LeaveApprovalDialog } from "@/components/management/leave-approval-dialog";
+import { useRouter } from "next/navigation";
+import React from "react";
 
 function formatDate(date: string, tz: string = "UTC") {
   return new Date(date)
@@ -61,6 +74,7 @@ function formatDate(date: string, tz: string = "UTC") {
 export default function LeaveManagementPage() {
   const { hasPermission, user } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
 
   const [primaryRequests, setPrimaryRequests] = useState<LeaveRecord[]>([]);
   const [secondaryRequests, setSecondaryRequests] = useState<LeaveRecord[]>([]);
@@ -68,18 +82,22 @@ export default function LeaveManagementPage() {
     []
   );
   const [loading, setLoading] = useState(true);
+  const [holidays, setHolidays] = React.useState<Date[]>([])
+  const [workWeek, setWorkWeek] = React.useState<ApiWorkWeekDay[]>([])
 
-  const [selectedLeave, setSelectedLeave] = useState<LeaveRecord | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
-      .toISOString()
-      .split("T")[0],
-    to: new Date().toISOString().split("T")[0],
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    return {
+        from: firstDayOfMonth.toISOString().split("T")[0],
+        to: lastDayOfMonth.toISOString().split("T")[0],
+    };
   });
 
   const canManageLeaves = hasPermission("leaves.manage");
+
+  
 
   const fetchPendingLeaves = useCallback(async () => {
     if (!canManageLeaves) {
@@ -88,18 +106,31 @@ export default function LeaveManagementPage() {
     }
     setLoading(true);
     try {
-      const [primaryData, secondaryData] = await Promise.all([
+
+      
+
+      const [primaryData, secondaryData,holidaysData, workWeekData] = await Promise.all([
         getPrimaryLeaveApprovals(),
         getSecondaryLeaveApprovals(),
+        getHolidays(new Date().getFullYear()),
+        getWorkWeek()
       ]);
+
+      setHolidays(holidaysData.map(h => new Date(h.holiday_date)))
+      // Normalize the workWeek data to handle both boolean and number types
+      const normalizedWorkWeek = workWeekData.map(day => ({
+        ...day,
+        is_working_day: typeof day.is_working_day === 'boolean' ? (day.is_working_day ? 1 : 0) : day.is_working_day
+      }));
+      setWorkWeek(normalizedWorkWeek)
       setPrimaryRequests(
         primaryData.filter(
-          (r) => r.primary_status == false && r.primary_user === user?.id
+          (r) => !r.primary_status && r.primary_user === user?.id
         )
       );
       setSecondaryRequests(
         secondaryData.filter(
-          (r) => r.primary_status == true && r.secondry_status == false
+          (r) => r.primary_status && !r.secondry_status
         )
       );
     } catch (error) {
@@ -138,57 +169,59 @@ export default function LeaveManagementPage() {
     fetchHistoryLeaves();
   }, [fetchPendingLeaves, fetchHistoryLeaves]);
 
-  const handleStatusUpdate = async (
-    leaveId: number,
-    status: boolean,
-    reason?: string
-  ) => {
-    const isSecondary = secondaryRequests.some((r) => r.id === leaveId);
-    const apiCall = isSecondary ? approveSecondaryLeave : approvePrimaryLeave;
+  const handleDownload = async (e: React.MouseEvent, leaveId: number) => {
+    e.stopPropagation();
     try {
-      await apiCall(leaveId, status, reason);
-      toast({
-        title: "Success",
-        description: `Leave request has been updated.`,
-      });
-      setIsDialogOpen(false);
-      setSelectedLeave(null);
-      fetchPendingLeaves(); // Refresh pending lists
-      fetchHistoryLeaves(); // Also refresh history
+      await downloadLeaveApplication(leaveId);
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to update leave status.",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: `Failed to download PDF: ${error.message}`, variant: "destructive" });
     }
-  };
+  }
 
-  const handleRowClick = (leave: LeaveRecord, e: React.MouseEvent) => {
-    // Don't trigger row click if clicking on the info icon
-    if ((e.target as HTMLElement).closest("[data-info-icon]")) {
-      return;
-    }
+  const calculateLeaveDays = React.useCallback((startDate: Date | string, endDate: Date | string) => {
+      let count = 0;
+      const currentDate = new Date(startDate);
+      const lastDate = new Date(endDate);
+      
+      // Reset time to avoid timezone issues
+      currentDate.setHours(0, 0, 0, 0);
+      lastDate.setHours(0, 0, 0, 0);
+      
+      while(currentDate <= lastDate) {
+          const dayOfWeek = currentDate.getDay();
+          const isHoliday = holidays.some(h => {
+            const holidayDate = new Date(h);
+            holidayDate.setHours(0, 0, 0, 0);
+            return holidayDate.getTime() === currentDate.getTime();
+          });
+          
+          // Don't exclude approved leave dates from calculation for display purposes
+          // We only exclude them during form submission validation
+          
+          // Handle both boolean and number types for is_working_day
+          const workDayConfig = workWeek.find(d => 
+            ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]
+            .indexOf(d.day_of_week) === dayOfWeek
+          );
+          const isWorkingDay = workDayConfig ? 
+            (typeof workDayConfig.is_working_day === 'boolean' ? workDayConfig.is_working_day : workDayConfig.is_working_day === 1) : 
+            false;
+          
+          if(!isHoliday && isWorkingDay) {
+              count++;
+          }
+          currentDate.setDate(currentDate.getDate() + 1);
+      }
+      return count;
+    },[holidays,workWeek])
 
-    if (getStatusFromRecord(leave) === "pending") {
-      setSelectedLeave(leave);
-      setIsDialogOpen(true);
-    }
-  };
-
-  const calculateLeaveDays = (startDate: Date, endDate: Date) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-  };
+  
 
   const getStatusFromRecord = (
     leave: LeaveRecord
   ): "approved" | "rejected" | "pending" => {
     if (leave.rejection_reason != null) return "rejected";
-    if (leave.primary_status == true && leave.secondry_status == true)
+    if (leave.primary_status && leave.secondry_status)
       return "approved";
     return "pending";
   };
@@ -241,19 +274,22 @@ export default function LeaveManagementPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Id</TableHead>
               <TableHead>Employee</TableHead>
               <TableHead>Leave Type</TableHead>
               <TableHead>Dates (DD-MM-YYYY)</TableHead>
               <TableHead>Days</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {requests.map((leave) => (
               <TableRow
                 key={leave.id}
-                onClick={(e) => handleRowClick(leave, e)}
+                onClick={() => router.push(`/management/leaves/${leave.id}`)}
                 className="cursor-pointer hover:bg-muted/50 group relative"
               >
+                <TableCell>{leave.full_leave_id}</TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {leave.employee_name}
@@ -297,6 +333,11 @@ export default function LeaveManagementPage() {
                 <TableCell>
                   {calculateLeaveDays(leave.from_date, leave.to_date)}
                 </TableCell>
+                <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={(e) => handleDownload(e, leave.id)}>
+                        <Download className="h-4 w-4" />
+                    </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -321,16 +362,20 @@ export default function LeaveManagementPage() {
         <Table>
           <TableHeader>
             <TableRow>
+
+              <TableHead>Id</TableHead>
               <TableHead>Employee</TableHead>
               <TableHead>Leave Type</TableHead>
               <TableHead>Dates (DD-MM-YYYY)</TableHead>
               <TableHead>Your Action</TableHead>
               <TableHead>Final Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {requests.map((leave) => (
               <TableRow key={leave.id} className="group relative">
+                <TableCell>{leave.full_leave_id}</TableCell>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     {leave.employee_name}
@@ -395,8 +440,14 @@ export default function LeaveManagementPage() {
                       employee_id: leave.employee_id,
                       employee_name: leave.employee_name,
                       primary_user: 0,
+                      full_leave_id:leave.full_leave_id
                     })
                   )}
+                </TableCell>
+                <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={(e) => handleDownload(e, leave.id)}>
+                        <Download className="h-4 w-4" />
+                    </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -509,13 +560,6 @@ export default function LeaveManagementPage() {
           </Tabs>
         )}
       </div>
-
-      <LeaveApprovalDialog
-        leaveRecord={selectedLeave}
-        open={isDialogOpen}
-        onOpenChange={setIsDialogOpen}
-        onStatusUpdate={handleStatusUpdate}
-      />
     </MainLayout>
   );
 }

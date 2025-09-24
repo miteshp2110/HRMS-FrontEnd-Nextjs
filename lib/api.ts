@@ -31,7 +31,8 @@ export interface LeaveRecord{
   secondary_approver_name: string | null,
   employee_id: number,
   employee_name:string,
-  primary_user : number
+  primary_user : number,
+  full_leave_id:string
 }
 // export interface AttendanceRecord {
 //   id: number
@@ -416,6 +417,7 @@ export interface LeaveRecordHistory {
   primary_approver_name: string | null;
   secondary_approver_name: string | null;
   your_approval_level?: "primary" | "secondary";
+  full_leave_id:string
 }
 
 export interface SkilledEmployee {
@@ -1177,9 +1179,9 @@ export async function requestLeave(data: {
   })
 }
 
-export async function getMyLeaveRecords(): Promise<LeaveBalance[]> {
-  return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.LEAVE_RECORDS)
-}
+// export async function getMyLeaveRecords(): Promise<LeaveBalance[]> {
+//   return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.LEAVE_RECORDS)
+// }
 
 export async function deleteLeaveRequest(recordId: number): Promise<void> {
   await apiRequest(`${API_CONFIG.ENDPOINTS.LEAVE_REQUEST}/${recordId}`, {
@@ -1399,9 +1401,7 @@ export async function approveOvertime(recordId: number, status: 0 | 1): Promise<
 }
 
 // Calendar/Holiday Management APIs
-export async function getWorkWeek(): Promise<Array<{ day_of_week: string; is_working_day: boolean }>> {
-  return apiRequest<Array<{ day_of_week: string; is_working_day: boolean }>>(API_CONFIG.ENDPOINTS.WORK_WEEK)
-}
+
 
 export async function updateWorkWeek(
   data: Array<{ day_of_week: string; is_working_day: boolean }>,
@@ -1779,4 +1779,117 @@ export interface Holiday {
 
 export async function getHoliday(year: number): Promise<Holiday[]> {
     return apiRequest<Holiday[]>(`/settings/holidays?year=${year}`);
+}
+
+export interface UserByShift{
+  id: number
+  first_name:string
+  last_name :string
+  full_employee_id:string
+}
+export async function getUserByShift(shiftId: number): Promise<UserByShift[]> {
+    return apiRequest<UserByShift[]>(`${API_CONFIG.BASE_URL}/${API_CONFIG.ENDPOINTS.SHIFTS}/${shiftId}/users`);
+}
+// export async function getUserWithUnmarkedAttendance(shiftId: number,date:string): Promise<UserByShift[]> {
+//     return apiRequest<UserByShift[]>(`${API_CONFIG.ENDPOINTS.SHIFTS}/${shiftId}/unmarked-attendance/${date}`);
+// }
+
+export async function getUserWithUnmarkedAttendance(shiftId: number, date: string, punchoutOnly?: boolean): Promise<UserByShift[]> {
+    const url = `/shifts/${shiftId}/unmarked-attendance/${date}${punchoutOnly ? '?punchout=true' : ''}`;
+    return apiRequest<UserByShift[]>(url);
+}
+
+export async function bulkCreateAttendance(data: {
+  reason: string;
+  attendance_date: string;
+  punch_in_local?: string;
+  punch_out_local?: string;
+  timezone: string;
+  is_late?: boolean;
+  is_early_departure?: boolean;
+  records: { employee_id: number }[];
+}): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>('/attendance/bulk', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+
+export async function getLeaveRecordById(id: number): Promise<LeaveRecord> {
+  return apiRequest<LeaveRecord>(`${API_CONFIG.ENDPOINTS.LEAVES}/${id}`);
+}
+
+export async function downloadLeaveApplication(leaveId: number): Promise<void> {
+  const token = localStorage.getItem('hr_token'); 
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/leaves/download/${leaveId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, errorData.message || 'Failed to download the leave application.');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `Leave_Application_${leaveId}.pdf`; // Default
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch && filenameMatch.length > 1) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download error:', error);
+    throw error;
+  }
+}
+
+
+export interface LeaveLedgerEntry {
+  id: number;
+  transaction_date: string;
+  transaction_type: "deduction" | "accrual" | "adjustment";
+  previous_balance: string;
+  change_amount: string;
+  new_balance: string;
+  leave_record_id: number | null;
+  leave_type_name: string;
+}
+
+export async function getLeaveLedger(employeeId: number, leaveTypeId: number): Promise<LeaveLedgerEntry[]> {
+  return apiRequest<LeaveLedgerEntry[]>(`/leaves/ledger/${employeeId}?leave_type_id=${leaveTypeId}`);
+}
+
+export interface WorkWeekDay {
+  day_of_week: string;
+  is_working_day: boolean;
+}
+
+// ... existing code ...
+
+export async function getMyLeaveRecords(startDate?: string, endDate?: string): Promise<LeaveRecord[]> {
+  const params = new URLSearchParams()
+  if (startDate) params.append("startDate", startDate)
+  if (endDate) params.append("endDate", endDate)
+  return apiRequest<LeaveRecord[]>(`${API_CONFIG.ENDPOINTS.LEAVE_RECORDS}?${params.toString()}`)
+}
+
+export async function getWorkWeek(): Promise<Array<{ day_of_week: string; is_working_day: boolean }>> {
+  return apiRequest<Array<{ day_of_week: string; is_working_day: boolean }>>(API_CONFIG.ENDPOINTS.WORK_WEEK)
 }
