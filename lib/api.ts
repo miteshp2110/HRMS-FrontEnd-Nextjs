@@ -878,9 +878,9 @@ export async function updateLoanStatus(loanId: number, status: "approved" | "rej
 }
 
 
-export async function getExpenseClaims(): Promise<ExpenseApproval[]> {
-    return apiRequest<ExpenseApproval[]>(API_CONFIG.ENDPOINTS.EXPENSE_APPROVALS);
-}
+// export async function getExpenseClaims(): Promise<ExpenseApproval[]> {
+//     return apiRequest<ExpenseApproval[]>(API_CONFIG.ENDPOINTS.EXPENSE_APPROVALS);
+// }
 
 export async function updateExpenseStatus(expenseId: number, status: "approved" | "rejected"): Promise<void> {
     await apiRequest(`/expense/${expenseId}`, {
@@ -1893,3 +1893,137 @@ export async function getMyLeaveRecords(startDate?: string, endDate?: string): P
 export async function getWorkWeek(): Promise<Array<{ day_of_week: string; is_working_day: boolean }>> {
   return apiRequest<Array<{ day_of_week: string; is_working_day: boolean }>>(API_CONFIG.ENDPOINTS.WORK_WEEK)
 }
+
+export interface SkillMatrixData {
+  id: number;
+  skill_name: string;
+  employee_count: number;
+}
+
+export async function getSkillMatrix(): Promise<SkillMatrixData[]> {
+  return apiRequest<SkillMatrixData[]>('/skillMatrix/matrix');
+}
+
+
+// ... (existing code at the top of the file)
+
+// EXPENSE MANAGEMENT INTERFACES
+export interface ExpenseCategory {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  updated_by: number;
+}
+
+export interface ExpenseClaim {
+  id: number;
+  claim_type: 'Reimbursement' | 'Advance';
+  employee_id: number;
+  category_id: number;
+  title: string;
+  description?: string;
+  amount: number;
+  expense_date: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Reimbursed';
+  receipt_url?: string;
+  rejection_reason?: string;
+  transaction_id?: string;
+  approved_by?: number;
+  processed_by?: number;
+  created_at: string;
+  updated_at: string;
+  category_name: string;
+  employee_name: string;
+  approver_name?: string;
+  processor_name?: string;
+  reimbursement_method:string;
+}
+
+// ... (rest of the interfaces)
+
+// EXPENSE CATEGORY FUNCTIONS
+export async function getExpenseCategories(): Promise<ExpenseCategory[]> {
+  return apiRequest<ExpenseCategory[]>('/expense/categories');
+}
+
+export async function createExpenseCategory(data: { name: string; description?: string }): Promise<{ success: boolean; message: string; categoryId: number }> {
+  return apiRequest('/expense/categories', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateExpenseCategory(id: number, data: { name: string; description?: string }): Promise<void> {
+  await apiRequest(`/expense/categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteExpenseCategory(id: number): Promise<void> {
+  await apiRequest(`/expense/categories/${id}`, { method: 'DELETE' });
+}
+
+
+export async function submitExpenseClaim(
+  data: FormData ,
+): Promise<{ success: boolean; message: string }> {
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("hr_token") || ""}`,
+  }
+
+  // Add Content-Type only if NOT FormData
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+
+  const response = await fetch(
+    `${API_CONFIG.BASE_URL}/expense/claim`,
+    {
+      method: "POST",
+      headers,
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    }
+  )
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new ApiError(
+      response.status,
+      errorData.message || "API request failed",
+      errorData
+    )
+  }
+
+  return await response.json()
+}
+// EXPENSE CLAIMS & ADVANCES FUNCTIONS
+// export async function submitExpenseClaim(formData: FormData): Promise<{ success: boolean; message: string; claimId: number }> {
+//   // For multipart requests, the body is passed directly without stringifying
+//   return apiRequest('/expense/claim', { method: 'POST', body: formData, multipart: true });
+// }
+
+export async function createExpenseAdvance(data: { employee_id: number; category_id: number; title: string; description?: string; amount: number; expense_date: string; transaction_id?: string; }): Promise<{ success: boolean; message: string; claimId: number }> {
+  return apiRequest('/expense/advance', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getExpenseClaims(params?: { employee_id?: number; status?: string; claim_type?: string }): Promise<ExpenseClaim[]> {
+  const query = new URLSearchParams();
+  if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+  if (params?.status) query.append('status', params.status);
+  if (params?.claim_type) query.append('claim_type', params.claim_type);
+  const queryString = query.toString();
+  return apiRequest<ExpenseClaim[]>(`/expense/claims${queryString ? `?${queryString}` : ''}`);
+}
+
+// APPROVAL WORKFLOW FUNCTIONS
+export async function getExpenseApprovals(): Promise<ExpenseClaim[]> {
+  return apiRequest<ExpenseClaim[]>('/expense/approvals');
+}
+
+export async function processExpenseClaim(claimId: number, data: { status: 'Approved' | 'Rejected'; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/process/${claimId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function reimburseExpenseClaim(claimId: number, data: { transaction_id: string,reimbursement_method:string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/reimburse/${claimId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// ... (rest of the file)

@@ -1,65 +1,3 @@
-// "use client"
-
-// import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-// import { Settings } from "lucide-react"
-
-// import { RolesPermissionsPage } from "@/components/admin/roles-permissions-page"
-// import { JobsPage } from "@/components/admin/jobs-page"
-// import { ShiftsPage } from "@/components/admin/shifts-page"
-// import { SkillsPage } from "@/components/admin/skills-page"
-// import { DocumentTypesPage } from "@/components/admin/document-types-page"
-// import { CompanyCalendarPage } from "@/components/admin/company-calendar-page"
-// import { LeaveTypesPage } from "@/components/management/leave-types-page"
-
-// export function SettingsPage() {
-//     return (
-//         <div className="space-y-6">
-//             <div className="flex items-center gap-4">
-//                 <Settings className="h-8 w-8" />
-//                 <div>
-//                     <h1 className="text-3xl font-bold">Settings</h1>
-//                     <p className="text-muted-foreground">
-//                         Manage all company-wide configurations and settings from one place.
-//                     </p>
-//                 </div>
-//             </div>
-
-//             <Tabs defaultValue="roles" className="w-full">
-//                 <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-//                     <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-//                     <TabsTrigger value="jobs">Job Titles</TabsTrigger>
-//                     <TabsTrigger value="shifts">Shifts</TabsTrigger>
-//                     <TabsTrigger value="skills">Skills Library</TabsTrigger>
-//                     <TabsTrigger value="documents">Document Types</TabsTrigger>
-//                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
-//                     <TabsTrigger value="leave-types">Leave Types</TabsTrigger>
-//                 </TabsList>
-//                 <TabsContent value="roles" className="mt-6">
-//                     <RolesPermissionsPage />
-//                 </TabsContent>
-//                 <TabsContent value="jobs" className="mt-6">
-//                    <JobsPage />
-//                 </TabsContent>
-//                 <TabsContent value="shifts" className="mt-6">
-//                     <ShiftsPage />
-//                 </TabsContent>
-//                 <TabsContent value="skills" className="mt-6">
-//                     <SkillsPage />
-//                 </TabsContent>
-//                 <TabsContent value="documents" className="mt-6">
-//                     <DocumentTypesPage />
-//                 </TabsContent>
-//                 <TabsContent value="calendar" className="mt-6">
-//                     <CompanyCalendarPage />
-//                 </TabsContent>
-//                 <TabsContent value="leave-types" className="mt-6">
-//                     <LeaveTypesPage />
-//                 </TabsContent>
-//             </Tabs>
-//         </div>
-//     )
-// }
 
 "use client"
 
@@ -82,6 +20,7 @@ import { Button } from "../ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
 import { Input } from "../ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
+import { ExpenseCategoriesPage } from "./expense-categories-page"
 
 const timezones = [
     "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
@@ -186,6 +125,7 @@ export function SettingsPage() {
                     <TabsTrigger value="documents">Document Types</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
                     <TabsTrigger value="leave-types">Leave Types</TabsTrigger>
+                    <TabsTrigger value="expenses">Expense Categories</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="mt-6">
                    <Card>
@@ -270,6 +210,17 @@ export function SettingsPage() {
                 <TabsContent value="leave-types" className="mt-6">
                     <LeaveTypesPage />
                 </TabsContent>
+                <TabsContent value="expenses" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Expense Categories</CardTitle>
+                            <CardDescription>Manage categories for expense claims and advances.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ExpenseCategoriesPage />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
             <Dialog open={isNameSeriesDialogOpen} onOpenChange={setIsNameSeriesDialogOpen}>
                 <DialogContent>
@@ -313,3 +264,4 @@ export function SettingsPage() {
         </div>
     )
 }
+

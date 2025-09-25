@@ -102,6 +102,12 @@ const navigationItems: NavItem[] = [
         permission: "expenses.manage",
       },
       {
+    title: "Finance",
+    href: "/admin/finance",
+    icon: Banknote,
+    permission: "expenses.manage",
+  },
+      {
         title: "Shift Rotation",
         href: "/management/shift-rotation",
         icon: RefreshCw,
@@ -181,6 +187,11 @@ const navigationItems: NavItem[] = [
         title: "My Skills",
         href: "/self-service/skills",
         icon: GraduationCap,
+      },
+      {
+        title: "My Expenses",
+        href: "/self-service/expenses",
+        icon: Receipt,
       },
       {
         title: "My Loans",
