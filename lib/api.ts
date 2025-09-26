@@ -1928,17 +1928,18 @@ export interface ExpenseClaim {
   expense_date: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Reimbursed';
   receipt_url?: string;
-  rejection_reason?: string;
-  transaction_id?: string;
-  approved_by?: number;
-  processed_by?: number;
+  rejection_reason?: string | null;
+  transaction_id?: string | null;
+  approved_by?: number | null;
+  processed_by?: number | null;
   created_at: string;
   updated_at: string;
   category_name: string;
   employee_name: string;
-  approver_name?: string;
-  processor_name?: string;
-  reimbursement_method:string;
+  approver_name?: string | null;
+  processor_name?: string | null;
+  reimbursement_method?:string | null;
+  reimbursed_in_payroll_id?:number | null
 }
 
 // ... (rest of the interfaces)
@@ -1994,15 +1995,20 @@ export async function submitExpenseClaim(
 
   return await response.json()
 }
+
+export async function  updateExpenseClaim(data:{title:string,description:string,amount:number},id:number):Promise<{success: boolean; message: string;}>{
+  return apiRequest(`/expense/claims/${id}`,{method:'PATCH',body:JSON.stringify(data)})
+}
+export async function  deleteExpenseClaim(id:number):Promise<{success: boolean; message: string;}>{
+  return apiRequest(`/expense/claims/${id}`,{method:'DELETE'})
+}
 // EXPENSE CLAIMS & ADVANCES FUNCTIONS
 // export async function submitExpenseClaim(formData: FormData): Promise<{ success: boolean; message: string; claimId: number }> {
 //   // For multipart requests, the body is passed directly without stringifying
 //   return apiRequest('/expense/claim', { method: 'POST', body: formData, multipart: true });
 // }
 
-export async function createExpenseAdvance(data: { employee_id: number; category_id: number; title: string; description?: string; amount: number; expense_date: string; transaction_id?: string; }): Promise<{ success: boolean; message: string; claimId: number }> {
-  return apiRequest('/expense/advance', { method: 'POST', body: JSON.stringify(data) });
-}
+
 
 export async function getExpenseClaims(params?: { employee_id?: number; status?: string; claim_type?: string }): Promise<ExpenseClaim[]> {
   const query = new URLSearchParams();
@@ -2026,4 +2032,44 @@ export async function reimburseExpenseClaim(claimId: number, data: { transaction
   return apiRequest(`/expense/reimburse/${claimId}`, { method: 'PATCH', body: JSON.stringify(data) });
 }
 
-// ... (rest of the file)
+export async function adminUpdateExpense(claimId: number, data: Partial<ExpenseClaim>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/admin/claim/${claimId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createExpenseAdvance(data: { 
+  employee_id: number; 
+  category_id: number; 
+  title: string; 
+  description?: string; 
+  amount: number; 
+  expense_date: string; 
+}): Promise<{ success: boolean; message: string; claimId: number }> {
+  return apiRequest('/expense/advance', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function reimburseAdvance(claimId: number, transaction_id: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/advance/reimburse/${claimId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ transaction_id }),
+  });
+}
+
+
+export async function getProcessedClaims(startDate?: string, endDate?: string): Promise<ExpenseClaim[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  const queryString = params.toString();
+  return apiRequest(`/expense/claims/processed${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function getUpcomingPayrollReimbursements(startDate?: string, endDate?: string): Promise<ExpenseClaim[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  const queryString = params.toString();
+  return apiRequest(`/expense/claims/upcoming-payroll${queryString ? `?${queryString}` : ''}`);
+}

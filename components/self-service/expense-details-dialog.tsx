@@ -157,8 +157,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import {
   deleteExpense,
+  deleteExpenseClaim,
   type ExpenseClaim,
   updateExpense,
+  updateExpenseClaim,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { Label } from "@/components/ui/label";
@@ -192,11 +194,11 @@ export function ExpenseDetailsDialog({ claim, open, onOpenChange, onActionSucces
 
   const handleUpdate = async () => {
     try {
-        await updateExpense(claim.id, {
-            expense_title: formData.title,
-            expense_description: formData.description,
-            expense: formData.amount
-        });
+        await updateExpenseClaim({
+            title: formData.title!,
+            description: formData.description!,
+            amount: formData.amount!
+        },claim.id);
         toast({ title: "Success", description: "Claim updated successfully." });
         onActionSuccess();
         onOpenChange(false);
@@ -209,7 +211,7 @@ export function ExpenseDetailsDialog({ claim, open, onOpenChange, onActionSucces
   const handleDelete = async () => {
     if (!window.confirm("Are you sure you want to delete this expense claim?")) return;
     try {
-        await deleteExpense(claim.id);
+        await deleteExpenseClaim(claim.id);
         toast({ title: "Success", description: "Claim deleted successfully." });
         onActionSuccess();
         onOpenChange(false);
@@ -274,7 +276,12 @@ export function ExpenseDetailsDialog({ claim, open, onOpenChange, onActionSucces
                         <div className="pt-4 border-t mt-4">
                             <h4 className="font-semibold mb-2">Reimbursement Details</h4>
                             <div className="flex justify-between"><strong>Method:</strong> {claim.reimbursement_method}</div>
-                            {claim.transaction_id && <div className="flex justify-between"><strong>Transaction ID:</strong> {claim.transaction_id}</div>}
+                            {/* {claim.transaction_id && <div className="flex justify-between"><strong>Transaction ID:</strong> {claim.transaction_id}</div>} */}
+                            {
+                               (claim.status === 'Processed' || claim.status === "Reimbursed") && claim.reimbursement_method === 'Payroll'? <div className="flex justify-between"><strong>Payroll ID:</strong> {claim.reimbursed_in_payroll_id?claim.reimbursed_in_payroll_id:"About to be Processed"}</div>
+                              :
+                              <div className="flex justify-between"><strong>Transaction ID:</strong>{claim.transaction_id}</div>
+                            }
                         </div>
                     )}
                  </>
