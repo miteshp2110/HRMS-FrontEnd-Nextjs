@@ -21,6 +21,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "../ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table"
 import { ExpenseCategoriesPage } from "./expense-categories-page"
+import { LoanTypesPage } from "./loan-types-page"
+
 
 const timezones = [
     "UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles",
@@ -119,13 +121,14 @@ export function SettingsPage() {
                 <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8">
                     <TabsTrigger value="general">General</TabsTrigger>
                     <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
-                    <TabsTrigger value="jobs">Job Titles</TabsTrigger>
+                    
                     <TabsTrigger value="shifts">Shifts</TabsTrigger>
-                    <TabsTrigger value="skills">Skills Library</TabsTrigger>
+                    
                     <TabsTrigger value="documents">Document Types</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
                     <TabsTrigger value="leave-types">Leave Types</TabsTrigger>
                     <TabsTrigger value="expenses">Expense Categories</TabsTrigger>
+                    <TabsTrigger value="loan-types">Loan Types</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general" className="mt-6">
                    <Card>
@@ -188,19 +191,22 @@ export function SettingsPage() {
                             </Table>
                         </CardContent>
                    </Card>
+                   <Card className="mt-8 p-3">
+                        <JobsPage/>
+                   </Card>
+                   <Card className="mt-8 p-3">
+                        
+                        <SkillsPage/>
+                   </Card>
                 </TabsContent>
                 <TabsContent value="roles" className="mt-6">
                     <RolesPermissionsPage />
                 </TabsContent>
-                <TabsContent value="jobs" className="mt-6">
-                   <JobsPage />
-                </TabsContent>
+                
                 <TabsContent value="shifts" className="mt-6">
                     <ShiftsPage />
                 </TabsContent>
-                <TabsContent value="skills" className="mt-6">
-                    <SkillsPage />
-                </TabsContent>
+                
                 <TabsContent value="documents" className="mt-6">
                     <DocumentTypesPage />
                 </TabsContent>
@@ -220,6 +226,9 @@ export function SettingsPage() {
                             <ExpenseCategoriesPage />
                         </CardContent>
                     </Card>
+                </TabsContent>
+                <TabsContent value="loan-types" className="mt-6">
+                    <LoanTypesPage/>
                 </TabsContent>
             </Tabs>
             <Dialog open={isNameSeriesDialogOpen} onOpenChange={setIsNameSeriesDialogOpen}>

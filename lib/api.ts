@@ -2073,3 +2073,213 @@ export async function getUpcomingPayrollReimbursements(startDate?: string, endDa
   const queryString = params.toString();
   return apiRequest(`/expense/claims/upcoming-payroll${queryString ? `?${queryString}` : ''}`);
 }
+
+export interface LoanType {
+  id: number;
+  name: string;
+  is_advance: boolean;
+  interest_rate: number;
+  max_tenure_months: number;
+  eligibility_percentage: number;
+}
+
+export interface LoanEligibility {
+  eligible_base_amount: number;
+  eligible_products: Array<{
+    loan_type_id: number;
+    name: string;
+    is_advance: boolean;
+    interest_rate: number;
+    max_tenure_months: number;
+    max_eligible_amount: number;
+  }>;
+}
+export interface Repayment {
+    id: number;
+    loan_application_id: number;
+    schedule_id: number;
+    payslip_id: number | null;
+    repayment_amount: string;
+    repayment_date: string;
+    transaction_id: string | null;
+    created_at: string;
+}
+
+// export interface LoanApplication {
+//   id: number ;
+//   application_id_text: string;
+//   employee_id: number;
+//   employee_name: string;
+//   loan_type_id: number;
+//   loan_type_name: string;
+//   is_advance: boolean;
+//   requested_amount: number;
+//   approved_amount?: number;
+//   tenure_months: number;
+//   interest_rate: number;
+//   purpose: string;
+//   status: 'Pending Approval'|'Approved'|'Rejected'|'Disbursed'|'Closed';
+//   rejection_reason?: string;
+//   disbursement_date?: string;
+//   jv_number?: string;
+//   amortization_schedule?: AmortizationEntry[];
+//   manual_repayments?: ManualRepayment[];
+//   created_at: string;
+// }
+
+export interface LoanApplication {
+  id: number;
+  application_id_text: string;
+  employee_id: number;
+  loan_type_id: number;
+  requested_amount: string;
+  approved_amount: string | null;
+  tenure_months: number;
+  emi_amount: string | null;
+  interest_rate: string;
+  purpose: string | null;
+  status: 'Pending Approval' | 'Approved' | 'Rejected' | 'Disbursed' | 'Closed';
+  manager_approver_id: number | null;
+  hr_approver_id: number | null;
+  rejection_reason: string | null;
+  disbursement_date: string | null;
+  jv_number: string | null;
+  created_at: string;
+  updated_at: string;
+  loan_type_name: string;
+  is_advance: number; // is_advance is 0 or 1
+  employee_name: string;
+  manager_approver_name: string | null;
+  hr_approver_name: string | null;
+  amortization_schedule: AmortizationEntry[];
+  manual_repayments: Repayment[];
+}
+// export interface AmortizationEntry {
+//   id: number;
+//   due_date: string;
+//   emi_amount: number;
+//   principal: number;
+//   interest: number;
+//   balance: number;
+//   status: 'Pending' | 'Paid';
+// }
+export interface AmortizationEntry {
+  id: number;
+  loan_application_id: number;
+  due_date: string;
+  emi_amount: string;
+  principal_component: string;
+  interest_component: string;
+  status: 'Pending' | 'Paid';
+  repayment_id: number | null;
+}
+export interface ManualRepayment {
+  id: number;
+  schedule_id: number;
+  repayment_date: string;
+  transaction_id: string;
+}
+
+export interface OngoingLoan {
+    id: number;
+    application_id_text: string;
+    approved_amount: string;
+    emi_amount: string;
+    tenure_months: number;
+    loan_type_name: string;
+    emis_paid: number;
+    total_emis: number;
+}
+
+
+export async function getOngoingLoans(employeeId: number): Promise<OngoingLoan[]> {
+    return apiRequest(`/loans/applications/ongoing/${employeeId}`);
+}
+
+// Loan Type Management
+export async function getLoanTypes(): Promise<LoanType[]> {
+  return apiRequest('/loans/types');
+}
+
+export async function createLoanType(data: Partial<LoanType>): Promise<{ success: boolean; message: string; loanTypeId: number }> {
+  return apiRequest('/loans/types', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateLoanType(id: number, data: Partial<LoanType>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/types/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee Application Process
+export async function getLoanEligibility(): Promise<LoanEligibility> {
+  return apiRequest('/loans/eligibility');
+}
+
+export async function applyForLoan(data: { loan_type_id: number; requested_amount: number; tenure_months: number; purpose: string }): Promise<{ success: boolean; message: string; applicationId: number; application_id_text: string }> {
+  return apiRequest('/loans/apply', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Approval & Disbursement Workflow
+export async function getPendingApprovals(): Promise<LoanApplication[]> {
+  return apiRequest('/loans/approvals');
+}
+
+export async function processLoanApplication(applicationId: number, data: { status: 'Approved' | 'Rejected'; approved_amount?: number; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/process/${applicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function disburseLoan(applicationId: number, data: { disbursement_date: string; jv_number: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/disburse/${applicationId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Viewing & Tracking Applications
+export async function getLoanApplications(): Promise<LoanApplication[]> {
+  return apiRequest('/loans/applications');
+}
+export async function getLoanApplicationsByEmployee(employeeId:number): Promise<LoanApplication[]> {
+  return apiRequest(`/loans/applications?employee_id=${employeeId}`);
+}
+
+export async function getLoanApplicationDetails(applicationId: number): Promise<LoanApplication> {
+  return apiRequest(`/loans/applications/${applicationId}`);
+}
+
+// Repayment & Closure
+export async function manualRepayment(scheduleId: number, data: { repayment_date: string; transaction_id: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/repayment/manual/${scheduleId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function forecloseLoan(applicationId: number): Promise<{ success: boolean; message: string; final_settlement_amount: number }> {
+  return apiRequest(`/loans/foreclose/${applicationId}`, { method: 'POST' });
+}
+
+export async function adminUpdateLoanApplication(applicationId: number, data: { approved_amount?: number; interest_rate?: number, tenure_months?: number }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/admin/update/${applicationId}`, { 
+    method: 'PATCH', 
+    body: JSON.stringify(data) 
+  });
+}
+
+
+export async function downloadLoanAgreement(applicationId: number, fileName: string): Promise<void> {
+  const token = localStorage.getItem("hr_token");
+  const response = await fetch(`${API_CONFIG.BASE_URL}/loans/download/${applicationId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to download file.');
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileName}.pdf` || 'loan-agreement.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
