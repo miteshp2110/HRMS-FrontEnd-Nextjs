@@ -1474,33 +1474,33 @@ export async function editLoan(
 }
 
 // Salary Structure Management APIs
-export async function assignSalaryComponent(
-  employeeId: number,
-  data: {
-    component_id: number
-    value_type: "fixed" | "percentage"
-    value: number
-    based_on_component_id?: number
-  },
-): Promise<{ success: boolean; message: string }> {
-  return apiRequest<{ success: boolean; message: string }>(
-    `${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}`,
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  )
-}
+// export async function assignSalaryComponent(
+//   employeeId: number,
+//   data: {
+//     component_id: number
+//     value_type: "fixed" | "percentage"
+//     value: number
+//     based_on_component_id?: number
+//   },
+// ): Promise<{ success: boolean; message: string }> {
+//   return apiRequest<{ success: boolean; message: string }>(
+//     `${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}`,
+//     {
+//       method: "POST",
+//       body: JSON.stringify(data),
+//     },
+//   )
+// }
 
 export async function getMySalaryStructure(): Promise<SalaryComponent[]> {
   return apiRequest<SalaryComponent[]>(API_CONFIG.ENDPOINTS.MY_SALARY_STRUCTURE)
 }
 
-export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
-  await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
-    method: "DELETE",
-  })
-}
+// export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
+//   await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
+//     method: "DELETE",
+//   })
+// }
 
 export async function updateSalaryComponent(employeeId: number, componentId: number,data:Partial<SalaryComponent>): Promise<{ success: boolean; message: string }> {
   return await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
@@ -2282,4 +2282,72 @@ export async function downloadLoanAgreement(applicationId: number, fileName: str
   a.click();
   a.remove();
   window.URL.revokeObjectURL(url);
+}
+
+
+
+export interface PayrollComponentDef {
+  id: number;
+  name: string;
+  type: 'earning' | 'deduction';
+}
+
+export interface PayrollParameter {
+    name: string;
+    value: string;
+}
+
+export interface FormulaComponent {
+    type: 'component' | 'standard_parameter' | 'number' | 'operator' | 'parenthesis';
+    value: string;
+}
+
+// Updated interface to match the detailed API response
+export interface EmployeeSalaryStructure {
+    id: number;
+    component_name: string;
+    component_type: 'earning' | 'deduction';
+    calculation_type: 'Fixed' | 'Percentage' | 'Formula';
+    value: string | null; // Value can be a number or percentage
+    custom_formula: FormulaComponent[] | null;
+    based_on_component_name: string | null;
+    component_id: number;
+    calculated_amount: number;
+}
+
+
+// Manage Payroll Component Definitions
+export async function createPayrollComponentDef(data: { name: string; type: 'earning' | 'deduction' }): Promise<{ success: boolean; message: string; component: PayrollComponentDef }> {
+  return apiRequest('/payroll/components', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
+  return apiRequest('/payroll/components');
+}
+
+export async function updatePayrollComponentDef(id: number, data: { name?: string; type?: 'earning' | 'deduction' }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/payroll/components/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deletePayrollComponentDef(id: number): Promise<void> {
+  await apiRequest(`/payroll/components/${id}`, { method: 'DELETE' });
+}
+
+
+// Fetch Formula Building Blocks
+export async function getPayrollParams(): Promise<PayrollParameter[]> {
+  return apiRequest('/payroll/structure/params');
+}
+
+// Manage Employee's Salary Structure
+export async function getEmployeeSalaryStructure(employeeId: number): Promise<EmployeeSalaryStructure[]> {
+  return apiRequest(`/payroll/structure/${employeeId}`);
+}
+
+export async function assignSalaryComponent(employeeId: number, data: any): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/payroll/structure/${employeeId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
+  await apiRequest(`/payroll/structure/${employeeId}/components/${componentId}`, { method: 'DELETE' });
 }
