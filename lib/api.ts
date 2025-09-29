@@ -2611,3 +2611,63 @@ export async function processCaseApproval(caseId: number, data: { status: 'Appro
 export async function syncCaseToPayroll(caseId: number): Promise<any> {
     return apiRequest(`/cases/${caseId}/sync-payroll`, { method: 'POST' });
 }
+
+export interface JobOpening {
+    id: number;
+    job_title: string;
+    status: 'Open' | 'Closed';
+    number_of_positions: number;
+    applicant_count: number;
+}
+
+export interface Applicant {
+    id: number;
+    opening_id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    notes: string | null;
+    resume_url: string | null;
+    status: 'Applied' | 'Interviewing' | 'Approved' | 'Rejected' | 'Hired';
+}
+
+// Job Openings
+export async function createJobOpening(data: { job_id: number; number_of_positions: number; required_skill_ids: number[] }): Promise<any> {
+    return apiRequest('/onboarding/openings', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getJobOpenings(): Promise<JobOpening[]> {
+    return apiRequest('/onboarding/openings');
+}
+
+// Applicants
+export async function addApplicant(openingId: number, formData: FormData): Promise<any> {
+    const token = localStorage.getItem("hr_token");
+    const response = await fetch(`${API_CONFIG.BASE_URL}/onboarding/openings/${openingId}/applicants`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add applicant');
+    }
+    return response.json();
+}
+
+export async function getApplicantsForOpening(openingId: number): Promise<Applicant[]> {
+    return apiRequest(`/onboarding/openings/${openingId}/applicants`);
+}
+
+export async function updateApplicantStatus(applicantId: number, data: { status: string; notes?: string }): Promise<any> {
+    return apiRequest(`/onboarding/applicants/${applicantId}/status`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function convertApplicantToEmployee(applicantId: number, data: { new_employee_id: string; joining_date: string; system_role: number; shift: number }): Promise<{ success: boolean; message: string; user_id: number; temporary_password?: string }> {
+    return apiRequest(`/onboarding/applicants/${applicantId}/convert`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateJobOpeningStatus(openingId: number, status: 'Open' | 'Closed' | 'OnHold'): Promise<any> {
+    return apiRequest(`/onboarding/openings/${openingId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}

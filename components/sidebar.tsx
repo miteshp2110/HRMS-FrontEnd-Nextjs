@@ -68,6 +68,12 @@ const navigationItems: NavItem[] = [
     icon: UserCheck,
     children: [
       {
+    title: "Onboarding",
+    href: "/admin/onboarding",
+    icon: UserPlus, // Or another suitable icon
+    permission: "onboarding.manage", // Assuming a new permission
+  },
+      {
         title: "Leave Approvals", 
         href: "/management/leaves",
         icon: UserPlus,
