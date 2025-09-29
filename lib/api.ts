@@ -12,11 +12,7 @@ export interface LoanRepayment {
 }
 
 
-export interface LeaveBalance {
-  id: number
-  leave_type_name: string
-  balance: number
-}
+
 export interface LeaveRecord{
   id:number,
   leave_type_name:string,      
@@ -34,6 +30,7 @@ export interface LeaveRecord{
   primary_user : number,
   full_leave_id:string
 }
+
 // export interface AttendanceRecord {
 //   id: number
 //   attendance_date: string
@@ -351,6 +348,7 @@ export interface LeaveType {
   accurable: boolean
   accural_rate: number
   max_balance: number
+  is_encashable :boolean
 }
 
 
@@ -2350,4 +2348,266 @@ export async function assignSalaryComponent(employeeId: number, data: any): Prom
 
 export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
   await apiRequest(`/payroll/structure/${employeeId}/components/${componentId}`, { method: 'DELETE' });
+}
+
+export interface BenefitBand {
+    id?: number;
+    band_name: string;
+    min_years_service: number;
+    max_years_service: number;
+    leave_salary_calculation: 'Basic' | 'Gross';
+    leave_salary_percentage: number;
+    lta_allowance: number;
+    lta_frequency_years: number;
+    additional_annual_leaves: number;
+    medical_plan_details: string;
+    education_allowance_per_child: number;
+    fuel_allowance_monthly: number;
+}
+
+export interface MyBenefits extends BenefitBand {
+    years_of_service: string;
+}
+
+// Manage Benefit Bands (Admin)
+export async function createBenefitBand(data: BenefitBand): Promise<{ success: boolean; message: string; bandId: number }> {
+  return apiRequest('/benefits/bands', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getBenefitBands(): Promise<BenefitBand[]> {
+  return apiRequest('/benefits/bands');
+}
+
+export async function updateBenefitBand(id: number, data: Partial<BenefitBand>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/benefits/bands/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee Benefit Assignment
+export async function getMyBenefits(): Promise<MyBenefits> {
+  return apiRequest('/benefits/my-band');
+}
+
+export interface LeaveBalance {
+  id: number;
+  leave_type_name: string;
+  is_encashable: boolean;
+  balance: string;
+}
+
+export interface LeaveEncashmentRequest {
+    id: number;
+    employee_id: number;
+    request_date: string;
+    days_to_encash: string;
+    calculated_amount: string;
+    status: 'Pending' | 'Approved' | 'Rejected' | 'Processed'; // Added 'Processed'
+    employee_name: string;
+    jv_number?: string;
+    rejection_reason?: string;
+}
+
+
+
+export async function submitLeaveEncashment(data: { leave_type_id: number; days_to_encash: number }): Promise<{ success: boolean; message: string; encashmentId: number }> {
+  return apiRequest('/leaves/encashment/request', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Admin gets ALL requests (can be filtered on the frontend)
+export async function getLeaveEncashmentRequests(params?: { employee_id?: number; status?: string }): Promise<LeaveEncashmentRequest[]> {
+  const query = new URLSearchParams();
+  if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+  if (params?.status) query.append('status', params.status);
+  const queryString = query.toString();
+  return apiRequest(`/leaves/encashment/all${queryString ? `?${queryString}` : ''}`);
+}
+
+
+// Manager approves or rejects a 'Pending' request
+export async function approveLeaveEncashment(id: number, data: { status: 'Approved' | 'Rejected'; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/leaves/encashment/approval/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Finance/HR disburses an 'Approved' request
+export async function disburseLeaveEncashment(id: number, data: { jv_number: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/leaves/encashment/disburse/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export interface EosSettlement {
+    id: number;
+    employee_id: number;
+    last_working_date: string;
+    termination_type: 'Resignation' | 'Termination' | 'End of Contract' | 'Retirement';
+    net_settlement_amount: string;
+    status: 'Pending' | 'Approved' | 'Paid';
+    employee_name: string;
+}
+
+// V2 Detailed Interface with Breakdowns
+export interface EosSettlementDetails {
+    id: number;
+    employee_id: number;
+    last_working_date: string;
+    termination_type: 'Resignation' | 'Termination' | 'End of Contract' | 'Retirement';
+    termination_reason: string | null;
+    notes: string | null;
+    leave_encashment_amount: string;
+    leave_encashment_breakdown: {
+        basic_salary: number;
+        daily_rate: string;
+        total_leave_balance: number;
+        unpaid_days_deducted: number;
+        net_encashable_days: number;
+        calculation: string;
+    };
+    gratuity_amount: string;
+    gratuity_breakdown: {
+        service_years: string;
+        basic_salary: number;
+        breakdown: {
+            years: number | string;
+            rate_in_days: number;
+            days_payable: number | string;
+        }[];
+        total_days_payable: string;
+        calculation: string;
+    };
+    loan_deduction_amount: string;
+    loan_deduction_breakdown: {
+        loan_id: string;
+        outstanding_principal: string;
+    }[];
+    case_deduction_amount : string;
+    case_deduction_breakdown:{
+      case_id:string;
+      title:string;
+      amount:string
+    }[]
+    other_deductions: string;
+    total_additions: string;
+    total_deductions: string;
+    net_settlement_amount: string;
+    status: 'Pending' | 'Approved' | 'Paid';
+    jv_number: string | null;
+    employee_name: string;
+}
+
+
+// 1. Initiate a New Settlement
+export async function initiateSettlement(data: {
+    employee_id: number;
+    termination_type: string;
+    last_working_date: string;
+    termination_reason?: string;
+    notes?: string;
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest('/eos/initiate', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// 2. Get All Settlements
+export async function getAllSettlements(): Promise<EosSettlement[]> {
+    return apiRequest('/eos/');
+}
+
+// 3. Get Single Settlement Details
+export async function getSettlementDetails(settlementId: number): Promise<EosSettlementDetails> {
+    return apiRequest(`/eos/${settlementId}`);
+}
+
+// 4. Update Deductions (Simplified for V2)
+export async function updateEosDeductions(settlementId: number, data: {
+    other_deductions?: number;
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/deductions`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// 5. Approve a Settlement
+export async function approveSettlement(settlementId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/approve`, { method: 'PATCH' });
+}
+
+// 6. Record a Payment
+export async function recordEosPayment(settlementId: number, data: { jv_number: string }): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/payment`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export interface CaseCategory {
+    id: number;
+    name: string;
+}
+
+export interface CaseFile {
+    id: number;
+    case_id: number;
+    file_url: string;
+    uploaded_at: string;
+}
+
+export interface Case {
+    id: number;
+    case_id_text: string;
+    employee_id: number;
+    employee_name: string;
+    category_id: number;
+    category_name: string;
+    title: string;
+    description: string;
+    status: 'Open' | 'Under Review' | 'Approved' | 'Rejected' | 'Closed';
+    deduction_amount: string | null;
+    is_deduction_synced: boolean;
+    raised_by_id: number;
+    raised_by_name: string;
+    assigned_to_id: number | null;
+    rejection_reason: string | null;
+    created_at: string;
+    attachments?: CaseFile[];
+}
+
+// Case Categories
+export async function getCaseCategories(): Promise<CaseCategory[]> {
+    return apiRequest('/cases/categories');
+}
+
+export async function createCaseCategory(data: { name: string }): Promise<any> {
+    return apiRequest('/cases/categories', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Cases
+export async function createCase(formData: FormData): Promise<any> {
+    // This requires a direct fetch call to handle multipart/form-data
+    const token = localStorage.getItem("hr_token");
+    const response = await fetch(`${API_CONFIG.BASE_URL}/cases`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create case');
+    }
+    return response.json();
+}
+
+export async function getAllCases(params?: { status?: string, employee_id?: number }): Promise<Case[]> {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+    const queryString = query.toString();
+    return apiRequest(`/cases${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function getCaseDetails(caseId: number): Promise<Case> {
+    // Assuming a GET /api/cases/:id endpoint exists as per standard practice
+    return apiRequest(`/cases/${caseId}`);
+}
+
+export async function getManagerCaseApprovals(): Promise<Case[]> {
+    return apiRequest('/cases/approvals');
+}
+
+export async function processCaseApproval(caseId: number, data: { status: 'Approved' | 'Rejected', rejection_reason?: string }): Promise<any> {
+    return apiRequest(`/cases/approvals/${caseId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function syncCaseToPayroll(caseId: number): Promise<any> {
+    return apiRequest(`/cases/${caseId}/sync-payroll`, { method: 'POST' });
 }

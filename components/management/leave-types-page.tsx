@@ -40,6 +40,7 @@ export function LeaveTypesPage() {
       accurable: false,
       accural_rate: 0,
       max_balance: 0,
+      is_encashable :false
   });
 
 
@@ -75,9 +76,10 @@ export function LeaveTypesPage() {
             accurable: leaveType.accurable,
             accural_rate: leaveType.accural_rate,
             max_balance: leaveType.max_balance,
+            is_encashable :leaveType.is_encashable
         });
     } else {
-        setFormData({ name: "", description: "", initial_balance: 0, accurable: false, accural_rate: 0, max_balance: 0 });
+        setFormData({ name: "", description: "", initial_balance: 0, accurable: false, accural_rate: 0, max_balance: 0 ,is_encashable:false});
     }
     setIsDialogOpen(true);
   }
@@ -154,6 +156,7 @@ export function LeaveTypesPage() {
                   <TableHead>Balance (Days)</TableHead>
                   <TableHead>Accruable</TableHead>
                   <TableHead>Monthly Rate</TableHead>
+                  <TableHead>EnCashable</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -166,6 +169,7 @@ export function LeaveTypesPage() {
                         {type.accurable ? <Check className="h-5 w-5 text-green-500"/> : <X className="h-5 w-5 text-muted-foreground"/>}
                     </TableCell>
                     <TableCell>{type.accurable ? `${type.accural_rate} days` : 'N/A'}</TableCell>
+                    <TableCell>{type.is_encashable ? <Check className="h-5 w-5 text-green-500"/> : <X className="h-5 w-5 text-muted-foreground"/>}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => handleOpenDialog(type)}>
                         <Edit className="h-4 w-4" />
@@ -202,6 +206,13 @@ export function LeaveTypesPage() {
                    <div>
                       <Label htmlFor="initial_balance">Initial Balance (Days)</Label>
                       <Input id="initial_balance" name="initial_balance" type="number" value={formData.initial_balance} onChange={(e) => setFormData({...formData, initial_balance: Number(e.target.value)})} required />
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div>
+                          <Label htmlFor="encashable">Encashable Leave</Label>
+                          <p className="text-xs text-muted-foreground">Can Employees Cashout unsused leave?</p>
+                      </div>
+                      <Switch id="encashable" checked={formData.is_encashable} onCheckedChange={(checked) => setFormData({...formData, is_encashable: checked})} />
                   </div>
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                       <div>

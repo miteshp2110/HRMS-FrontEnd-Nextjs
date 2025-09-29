@@ -41,6 +41,8 @@ import {
   CalendarPlus,
   RefreshCw,
   PanelRightDashedIcon,
+  Handshake,
+  FolderKanban,
 } from "lucide-react"
 import DashboardPage from "@/app/dashboard/page"
 
@@ -102,6 +104,12 @@ const navigationItems: NavItem[] = [
         permission: "expenses.manage",
       },
       {
+        title: "Leave Encashment",
+        href: "/management/leave-encashment",
+        icon: Wallet,
+        permission: "leaves.manage",
+      },
+      {
     title: "Finance",
     href: "/admin/finance",
     icon: Banknote,
@@ -112,6 +120,18 @@ const navigationItems: NavItem[] = [
         href: "/management/shift-rotation",
         icon: RefreshCw,
         permission: "shift.manage", 
+      },
+      {
+        title: "EOS Settlements",
+        href: "/admin/eos",
+        icon: Handshake,
+        permission: "eos.manage", // Assuming a new permission
+      },
+      {
+        title: "Employee Cases",
+        href: "/management/cases",
+        icon: FolderKanban,
+        permission: "cases.manage", // Assuming a new permission
       },
       {
         title: "Employee Reports",
@@ -192,6 +212,16 @@ const navigationItems: NavItem[] = [
         title: "My Expenses",
         href: "/self-service/expenses",
         icon: Receipt,
+      },
+      {
+        title: "My Benefits",
+        href: "/self-service/benefits",
+        icon: Award,
+      },
+      {
+        title: "Leave Encashment",
+        href: "/self-service/leave-encashment",
+        icon: Wallet,
       },
       {
         title: "My Loans",
