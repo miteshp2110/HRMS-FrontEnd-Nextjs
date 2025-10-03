@@ -44,6 +44,9 @@ import {
   type UserSkill,
   type ExpenseRecord,
   type UserAudit,
+  getOngoingLoans,
+  LoanApplication,
+  OngoingLoan,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -60,7 +63,7 @@ export default function EmployeeProfilePage() {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const [documents, setDocuments] = useState<EmployeeDocument[]>([])
   const [salaryStructure, setSalaryStructure] = useState<SalaryComponent[]>([])
-  const [loanHistory, setLoanHistory] = useState<LoanRecord[]>([])
+  const [loanHistory, setLoanHistory] = useState<OngoingLoan[]>([])
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([])
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([])
   const [auditHistory, setAuditHistory] = useState<UserAudit[]>([]);
@@ -91,7 +94,7 @@ export default function EmployeeProfilePage() {
           getDetailedUserProfile(employeeId),
           getBankDetails(employeeId),
           getEmployeeDocuments(employeeId),
-          getLoanHistory(employeeId),
+          getOngoingLoans(employeeId),
           getEmployeeLeaveBalance(employeeId),
           getEmployeeLeaveRecords(employeeId, firstDayOfMonth.toISOString().split('T')[0], today.toISOString().split('T')[0]),
           getUserSkills(employeeId),
@@ -132,7 +135,7 @@ export default function EmployeeProfilePage() {
         setBankDetails(bankData as BankDetails | null);
         setDocuments(documentsData as EmployeeDocument[] || []);
         if(canManageLoans && loansData){
-          setLoanHistory(loansData as LoanRecord[] || []);
+          setLoanHistory(loansData as OngoingLoan[] || []);
         }
         if(canManageLeaves && leaveBalanceData){
           setLeaveBalances(leaveBalanceData as LeaveBalance[] || []);
@@ -256,7 +259,7 @@ export default function EmployeeProfilePage() {
             <TabsTrigger value="documents">Documents</TabsTrigger>
             {canViewPayroll?<TabsTrigger value="salary">Salary</TabsTrigger>:<></>}
             {canManageLeaves?<TabsTrigger value="leaves">Leaves</TabsTrigger>:<></>}
-            {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>}
+            {/* {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>} */}
             {canManageSkills?<TabsTrigger value="skills">Skills</TabsTrigger>:<></>}
             {canManageExpense ?<TabsTrigger value="expenses">Expenses</TabsTrigger>:<></>}
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -282,7 +285,7 @@ export default function EmployeeProfilePage() {
           <TabsContent value="documents"><DocumentsTab documents={documents} isLoading={isLoading} /></TabsContent>
           {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
-          <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent>
+          {/* <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent> */}
           <TabsContent value="skills"><EmployeeSkillsTab skills={skills} isLoading={isLoading} /></TabsContent>
           <TabsContent value="expenses"><EmployeeExpensesTab initialExpenses={expenses} employeeId={employeeId} isLoading={isLoading} /></TabsContent>
           <TabsContent value="attendance"><AttendanceHeatmap employeeId={employeeId} /></TabsContent>
@@ -292,3 +295,4 @@ export default function EmployeeProfilePage() {
     </MainLayout>
   )
 }
+

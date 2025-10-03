@@ -99,6 +99,7 @@ import { getExpenseClaims, type ExpenseClaim } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { SubmitClaimDialog } from "./submit-claim-dialog"
 import { ExpenseDetailsDialog } from "./expense-details-dialog" // Import the new dialog
+import { useAuth } from "@/lib/auth-context"
 
 export function MyExpensesPage() {
   const [claims, setClaims] = React.useState<ExpenseClaim[]>([])
@@ -107,6 +108,7 @@ export function MyExpensesPage() {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = React.useState(false)
   const [selectedClaim, setSelectedClaim] = React.useState<ExpenseClaim | null>(null)
   const { toast } = useToast()
+  const {user} = useAuth()
 
   const fetchClaims = React.useCallback(async () => {
     setIsLoading(true)
@@ -165,8 +167,9 @@ export function MyExpensesPage() {
            <Table>
                 <TableHeader><TableRow><TableHead>Type</TableHead><TableHead>Title</TableHead><TableHead>Amount</TableHead><TableHead>Date</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
                 <TableBody>
-                    {claims.map(claim => (
-                        <TableRow key={claim.id} onClick={() => handleRowClick(claim)} className="cursor-pointer">
+                    {claims.map((claim)=>{
+                      if(claim.employee_id === user?.id){
+                        return <TableRow key={claim.id} onClick={() => handleRowClick(claim)} className="cursor-pointer">
                             <TableCell><Badge variant="outline">{claim.claim_type}</Badge></TableCell>
                             <TableCell>{claim.title}</TableCell>
                             <TableCell>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'AED' }).format(claim.amount)}</TableCell>
@@ -174,7 +177,8 @@ export function MyExpensesPage() {
                             <TableCell>{getStatusBadge(claim.status)}</TableCell>
                             
                         </TableRow>
-                    ))}
+                      }
+                    })}
                 </TableBody>
            </Table>
         </CardContent>

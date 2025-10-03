@@ -45,9 +45,12 @@ export default function MyLoansPage() {
     const fetchData = React.useCallback(async () => {
         setIsLoading(true);
         try {
+            const hr_user = JSON.parse(localStorage.getItem('hr_user')!)
+            
             const [eligibilityData, applicationsData] = await Promise.all([
                 getLoanEligibility(),
-                getLoanApplicationsByEmployee(user?.id!)
+                getLoanApplicationsByEmployee(hr_user.id)
+                
             ]);
             setEligibility(eligibilityData);
             setApplications(applicationsData);

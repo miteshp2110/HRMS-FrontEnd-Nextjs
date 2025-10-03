@@ -101,6 +101,7 @@ export interface DetailedUserProfile {
   inactivated_by_name:string
   inactivated_by:number
   full_employee_id:string
+  shift_id : number
 
 }
 
@@ -2103,27 +2104,6 @@ export interface Repayment {
     created_at: string;
 }
 
-// export interface LoanApplication {
-//   id: number ;
-//   application_id_text: string;
-//   employee_id: number;
-//   employee_name: string;
-//   loan_type_id: number;
-//   loan_type_name: string;
-//   is_advance: boolean;
-//   requested_amount: number;
-//   approved_amount?: number;
-//   tenure_months: number;
-//   interest_rate: number;
-//   purpose: string;
-//   status: 'Pending Approval'|'Approved'|'Rejected'|'Disbursed'|'Closed';
-//   rejection_reason?: string;
-//   disbursement_date?: string;
-//   jv_number?: string;
-//   amortization_schedule?: AmortizationEntry[];
-//   manual_repayments?: ManualRepayment[];
-//   created_at: string;
-// }
 
 export interface LoanApplication {
   id: number;
@@ -2152,15 +2132,7 @@ export interface LoanApplication {
   amortization_schedule: AmortizationEntry[];
   manual_repayments: Repayment[];
 }
-// export interface AmortizationEntry {
-//   id: number;
-//   due_date: string;
-//   emi_amount: number;
-//   principal: number;
-//   interest: number;
-//   balance: number;
-//   status: 'Pending' | 'Paid';
-// }
+
 export interface AmortizationEntry {
   id: number;
   loan_application_id: number;
@@ -2319,9 +2291,9 @@ export async function createPayrollComponentDef(data: { name: string; type: 'ear
   return apiRequest('/payroll/components', { method: 'POST', body: JSON.stringify(data) });
 }
 
-export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
-  return apiRequest('/payroll/components');
-}
+// export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
+//   return apiRequest('/payroll/components');
+// }
 
 export async function updatePayrollComponentDef(id: number, data: { name?: string; type?: 'earning' | 'deduction' }): Promise<{ success: boolean; message: string }> {
   return apiRequest(`/payroll/components/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
@@ -2670,4 +2642,761 @@ export async function convertApplicantToEmployee(applicantId: number, data: { ne
 
 export async function updateJobOpeningStatus(openingId: number, status: 'Open' | 'Closed' | 'OnHold'): Promise<any> {
     return apiRequest(`/onboarding/openings/${openingId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+
+export interface ReviewCycle {
+    id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    status: 'Upcoming' | 'Active' | 'Closed';
+}
+
+export interface Kpi {
+    id: number;
+    kpi_name: string;
+    description: string;
+    category: 'Qualitative' | 'Quantitative';
+}
+
+export interface TeamAppraisalStatus {
+    employee_id: number;
+    employee_name: string;
+    appraisal_id: number | null;
+    status: 'Not Started' | 'Pending' | 'Self-Assessment' | 'Manager-Review' | 'Completed';
+}
+
+export interface AppraisalGoal {
+    id: number;
+    appraisal_id: number;
+    goal_title: string;
+    goal_description: string;
+    weightage: number;
+    employee_comments: string | null;
+    employee_rating: number | null;
+    manager_comments: string | null;
+    manager_rating: number | null;
+}
+
+export interface AppraisalKpi {
+    id: number;
+    appraisal_id: number;
+    kpi_id: number;
+    kpi_name: string;
+    target: string;
+    actual: string | null;
+    weightage: number;
+    employee_comments: string | null;
+    employee_rating: number | null;
+    manager_comments: string | null;
+    manager_rating: number | null;
+}
+
+export interface AppraisalDetails {
+    id: number;
+    cycle_id: number;
+    employee_id: number;
+    employee_name: string;
+    manager_id: number;
+    status: 'Pending' | 'Self-Assessment' | 'Manager-Review' | 'Completed';
+    final_manager_comments: string | null;
+    overall_manager_rating: number | null;
+    goals: AppraisalGoal[];
+    kpis: AppraisalKpi[];
+}
+
+// Admin APIs
+export async function createReviewCycle(data: { cycle_name: string; start_date: string; end_date: string }): Promise<any> {
+    return apiRequest('/performance/cycles', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getReviewCycles(): Promise<ReviewCycle[]> {
+    return apiRequest('/performance/cycles');
+}
+
+export async function createKpi(data: { kpi_name: string; description: string; category: 'Qualitative' | 'Quantitative' }): Promise<any> {
+    return apiRequest('/performance/kpis', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getAllKpis(): Promise<Kpi[]> {
+    return apiRequest('/performance/kpis');
+}
+
+// Manager APIs
+
+
+export async function initiateTeamAppraisals(cycle_id: number): Promise<any> {
+    return apiRequest('/performance/appraisals/initiate-team', { method: 'POST', body: JSON.stringify({ cycle_id }) });
+}
+
+export async function assignGoal(data: { appraisal_id: number; goal_title: string; goal_description: string; weightage: number }): Promise<any> {
+    return apiRequest('/performance/goals', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function assignKpi(data: { appraisal_id: number; kpi_id: number; target: string; weightage: number }): Promise<any> {
+    return apiRequest('/performance/kpis/assign', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getTeamAppraisalStatuses(cycleId: number): Promise<TeamAppraisalStatus[]> {
+    return apiRequest(`/performance/appraisals/team/${cycleId}`);
+}
+
+// Assumes an endpoint to get a single appraisal's details
+export async function getAppraisalDetails(appraisalId: number): Promise<AppraisalDetails> {
+    return apiRequest(`/performance/appraisals/${appraisalId}`);
+}
+
+export async function submitManagerAssessment(appraisalId: number, data: any): Promise<any> {
+    return apiRequest(`/performance/appraisals/${appraisalId}/manager-assess`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee APIs
+export async function getMyValuation(cycleId: number): Promise<AppraisalDetails> {
+    return apiRequest(`/performance/appraisals/my/${cycleId}`);
+}
+
+export async function submitSelfAssessment(appraisalId: number, data: any): Promise<any> {
+    return apiRequest(`/performance/appraisals/${appraisalId}/self-assess`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+
+
+// ... (existing API functions)
+
+// --- PAYROLL CYCLE & GROUPS APIS ---
+
+// export interface PayrollGroup {
+//     id: number;
+//     group_name: string;
+//     description: string;
+//     created_by: number;
+//     created_at: string;
+//     component_count: string;
+// }
+
+// export interface PayrollGroupDetails {
+//     id: number;
+//     group_name: string;
+//     description: string;
+//     components: { id: number; name: string; type: 'earning' | 'deduction' }[];
+// }
+
+
+// export interface PayrollCycle {
+//     id: number;
+//     cycle_name: string;
+//     start_date: string;
+//     end_date: string;
+//     status: 'Draft' | 'Auditing' | 'Review' | 'Finalized' | 'Paid';
+//     initiated_by_name: string;
+//     runs: {
+//         id: number;
+//         cycle_id: number;
+//         group_id: number;
+//         status: 'Pending' | 'Calculated';
+//         group_name: string;
+//     }[];
+//     payslips: {
+//         id: number;
+//         employee_id: number;
+//         status: 'Under Review' | 'Reviewed';
+//     }[];
+// }
+
+// export interface AuditFlag {
+//     id: number;
+//     cycle_id: number;
+//     employee_id: number;
+//     flag_type: string;
+//     description: string;
+//     status: 'Open' | 'Resolved';
+//     employee_name: string;
+// }
+
+// export interface PayslipSummary {
+//     id: number;
+//     employee_id: number;
+//     employee_name: string;
+//     gross_earnings: string;
+//     total_deductions: string;
+//     net_pay: string;
+//     status: 'Draft' | 'Finalized';
+// }
+
+// export interface PayslipDetails extends PayslipSummary {
+//     details: {
+//         id: number;
+//         component_name: string;
+//         component_type: 'earning' | 'deduction';
+//         amount: string;
+//         calculation_breakdown: any;
+//         group_name: string;
+//     }[];
+// }
+
+
+// // Section 1: Setup - Managing Payroll Groups
+// export async function getPayrollGroups(): Promise<PayrollGroup[]> {
+//     return apiRequest('/payroll/groups');
+// }
+
+// export async function getPayrollGroupDetails(groupId: number): Promise<PayrollGroupDetails> {
+//     return apiRequest(`/payroll/groups/${groupId}`);
+// }
+
+// export async function createPayrollGroup(data: { group_name: string; description: string; components: number[] }): Promise<any> {
+//     return apiRequest('/payroll/groups', { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function updatePayrollGroup(groupId: number, data: { group_name: string; description: string; components: number[] }): Promise<any> {
+//     return apiRequest(`/payroll/groups/${groupId}`, { method: 'PUT', body: JSON.stringify(data) });
+// }
+
+// export async function deletePayrollGroup(groupId: number): Promise<void> {
+//     await apiRequest(`/payroll/groups/${groupId}`, { method: 'DELETE' });
+// }
+
+
+// // Section 2: The Payroll Cycle Workflow
+// export async function getPayrollCycles(): Promise<PayrollCycle[]> {
+//     return apiRequest('/payroll/cycles');
+// }
+
+// export async function getPayrollCycleDetails(cycleId: number): Promise<PayrollCycle> {
+//     return apiRequest(`/payroll/cycles/${cycleId}`);
+// }
+
+// export async function createPayrollCycle(data: { cycle_name: string; start_date: string; end_date: string, group_ids: number[] }): Promise<{ success: boolean; message: string; cycleId: number }> {
+//     return apiRequest('/payroll/cycles', { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function runPrePayrollAudit(cycleId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/audit`, { method: 'POST' });
+// }
+// export async function verifyAudit(cycleId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/verifyAudit`, { method: 'POST' });
+// }
+
+// export async function getAuditFlags(cycleId: number): Promise<AuditFlag[]> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/audit/flags`);
+// }
+
+// export async function resolveAuditFlag(flagId: number): Promise<any> {
+//     return apiRequest(`/payroll/audit/flags/${flagId}/resolve`, { method: 'PATCH' });
+// }
+
+// export async function executePayrollGroupRun(cycleId: number, groupId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/groups/${groupId}/execute`, { method: 'POST' });
+// }
+
+// export async function getPayslipsForCycle(cycleId: number): Promise<PayslipSummary[]> {
+//     return apiRequest(`/payroll/payslips/cycle/${cycleId}`);
+// }
+
+// export async function getPayslipForReview(payslipId: number): Promise<PayslipDetails> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/review`);
+// }
+
+// export async function addManualAdjustment(payslipId: number, data: { component_name: string; component_type: 'earning' | 'deduction'; amount: number; reason: string }): Promise<any> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/adjust`, { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function finalizePayslip(payslipId: number): Promise<any> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/finalize`, { method: 'PATCH' });
+// }
+
+// export async function updatePayslipStatus(payslipId: number, status: 'Reviewed'): Promise<{success: boolean; message: string}> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// }
+
+// export async function bulkAddComponent(cycleId: number, data: { component_name: string; component_type: 'earning' | 'deduction'; amount: number; reason: string }): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/bulk-add`, { method: 'POST', body: JSON.stringify(data) });
+// }
+
+
+// // Section 3: Finalization & Employee Self-Service
+// export async function updatePayrollCycleStatus(cycleId: number, status: 'Auditing' | 'Review' | 'Finalized' | 'Paid'): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// }
+
+// export async function deletePayrollCycle(cycleId: number): Promise<void> {
+//     await apiRequest(`/payroll/cycles/${cycleId}`, { method: 'DELETE' });
+// }
+
+// export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
+// }
+
+export interface PayrollGroup {
+    id: number;
+    group_name: string;
+    description: string;
+    created_by: number;
+    created_by_name?: string;
+    created_at: string;
+    component_count: string;
+}
+
+export interface PayrollGroupDetails {
+    id: number;
+    group_name: string;
+    description: string;
+    components: { id: number; name: string; type: 'earning' | 'deduction' }[];
+}
+
+export interface PayrollComponentDef {
+    id: number;
+    name: string;
+    type: 'earning' | 'deduction';
+    description?: string;
+}
+
+export interface PayrollCycle {
+    id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    status: 'Draft' | 'Auditing' | 'Review' | 'Finalized' | 'Paid';
+    initiated_by: number;
+    initiated_by_name: string;
+    created_at: string;
+    runs: {
+        id: number;
+        cycle_id: number;
+        group_id: number;
+        status: 'Pending' | 'Calculated';
+        group_name: string;
+    }[];
+    payslips: {
+        id: number;
+        employee_id: number;
+        employee_name: string;
+        status: 'Draft' | 'Reviewed';
+        gross_earnings: string;
+        total_deductions: string;
+        net_pay: string;
+    }[];
+}
+
+export interface AuditFlag {
+    id: number;
+    cycle_id: number;
+    employee_id: number;
+    flag_type: string;
+    description: string;
+    status: 'Open' | 'Resolved';
+    employee_name: string;
+    joining_date?: string;
+    shift_name?: string;
+}
+
+export interface PayslipSummary {
+    id: number;
+    employee_id: number;
+    employee_name: string;
+    gross_earnings: string;
+    total_deductions: string;
+    net_pay: string;
+    status: 'Draft' | 'Reviewed' | 'Finalized';
+}
+
+export interface PayslipDetails extends PayslipSummary {
+    cycle_id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    details: {
+        id: number;
+        component_id: number | null;
+        component_name: string;
+        component_type: 'earning' | 'deduction';
+        amount: string;
+        calculation_breakdown: any;
+        group_name: string;
+    }[];
+}
+
+// Section 1: Setup - Managing Payroll Groups
+export async function getPayrollGroups(): Promise<PayrollGroup[]> {
+    return apiRequest('/payroll/groups');
+}
+
+export async function getPayrollGroupDetails(groupId: number): Promise<PayrollGroupDetails> {
+    return apiRequest(`/payroll/groups/${groupId}`);
+}
+
+export async function createPayrollGroup(data: { 
+    group_name: string; 
+    description: string; 
+    components: number[] 
+}): Promise<{ success: boolean; message: string; groupId: number }> {
+    return apiRequest('/payroll/groups', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function updatePayrollGroup(groupId: number, data: { 
+    group_name: string; 
+    description: string; 
+    components: number[] 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/groups/${groupId}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function deletePayrollGroup(groupId: number): Promise<void> {
+    await apiRequest(`/payroll/groups/${groupId}`, { method: 'DELETE' });
+}
+
+export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
+    return apiRequest('/payroll/components');
+}
+
+// Section 2: The Payroll Cycle Workflow
+export async function getPayrollCycles(): Promise<PayrollCycle[]> {
+    return apiRequest('/payroll/cycles');
+}
+
+export async function getPayrollCycleDetails(cycleId: number): Promise<PayrollCycle> {
+    return apiRequest(`/payroll/cycles/${cycleId}`);
+}
+
+export async function createPayrollCycle(data: { 
+    cycle_name: string; 
+    start_date: string; 
+    end_date: string;
+    group_ids: number[] 
+}): Promise<{ success: boolean; message: string; cycleId: number }> {
+    return apiRequest('/payroll/cycles', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function runPrePayrollAudit(cycleId: number): Promise<{
+    success: boolean;
+    message: string;
+    audit_summary: {
+        total_issues_found: number;
+        missing_attendance: number;
+        unapproved_overtime: number;
+        missing_salary_structure: number;
+        incomplete_structures: number;
+        invalid_formulas: number;
+    };
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/audit`, { method: 'POST' });
+}
+
+export async function verifyAudit(cycleId: number): Promise<{
+    cycle_id: number;
+    is_clear: boolean;
+    open_flags_count: number;
+    new_flags_found: number;
+    message: string;
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/verifyAudit`, { method: 'POST' });
+}
+
+export async function getAuditFlags(cycleId: number): Promise<AuditFlag[]> {
+    return apiRequest(`/payroll/cycles/${cycleId}/audit/flags`);
+}
+
+export async function resolveAuditFlag(flagId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/audit/flags/${flagId}/resolve`, { method: 'PATCH' });
+}
+
+export async function executePayrollGroupRun(cycleId: number, groupId: number): Promise<{
+    success: boolean;
+    message: string;
+    summary?: {
+        total_employees: number;
+        processed: number;
+        errors: number;
+        components_processed: number;
+    };
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/groups/${groupId}/execute`, { method: 'POST' });
+}
+
+export async function getPayslipsForCycle(cycleId: number): Promise<PayslipSummary[]> {
+    return apiRequest(`/payroll/payslips/cycle/${cycleId}`);
+}
+
+export async function getPayslipForReview(payslipId: number): Promise<PayslipDetails> {
+    return apiRequest(`/payroll/payslips/${payslipId}/review`);
+}
+
+export async function addManualAdjustment(payslipId: number, data: { 
+    component_name: string; 
+    component_type: 'earning' | 'deduction'; 
+    amount: number; 
+    reason: string 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/payslips/${payslipId}/adjust`, { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function finalizePayslip(payslipId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/payslips/${payslipId}/finalize`, { method: 'PATCH' });
+}
+
+export async function updatePayslipStatus(payslipId: number, status: 'Reviewed'): Promise<{
+    success: boolean; 
+    message: string
+}> {
+    return apiRequest(`/payroll/payslips/${payslipId}/status`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ status }) 
+    });
+}
+
+export async function bulkAddComponent(cycleId: number, data: { 
+    component_name: string; 
+    component_type: 'earning' | 'deduction'; 
+    amount: number; 
+    reason: string 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/cycles/${cycleId}/bulk-add`, { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+// Section 3: Finalization & Employee Self-Service
+export async function updatePayrollCycleStatus(cycleId: number, status: 
+    'Auditing' | 'Review' | 'Finalized' | 'Paid'
+): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/cycles/${cycleId}/status`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ status }) 
+    });
+}
+
+export async function deletePayrollCycle(cycleId: number): Promise<void> {
+    await apiRequest(`/payroll/cycles/${cycleId}`, { method: 'DELETE' });
+}
+
+export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
+    return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
+}
+
+
+
+export interface ShiftRotation {
+    id: number;
+    rotation_name: string;
+    effective_from: string;
+    status: 'Draft' | 'Pending Approval' | 'Approved' | 'Executed';
+    created_by_name: string;
+    employee_count: number;
+}
+
+export interface ShiftRotationDetailItem {
+    employee_id: number;
+    employee_name: string;
+    from_shift_id: number;
+    from_shift_name: string;
+    to_shift_id: number;
+    to_shift_name: string;
+}
+
+export interface ShiftRotationAudit {
+    id: number;
+    timestamp: string;
+    action: string;
+    details: string;
+    user_name: string;
+}
+
+export interface ShiftRotationDetails extends ShiftRotation {
+    details: ShiftRotationDetailItem[];
+    audit_log: ShiftRotationAudit[];
+}
+
+// Create a new Shift Rotation
+export async function createShiftRotation(data: {
+    rotation_name: string;
+    effective_from: string;
+    rotations: { employee_id: number; from_shift_id: number; to_shift_id: number }[];
+}): Promise<{ success: boolean; message: string; rotation_id: number }> {
+    return apiRequest('/shift-rotations', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Get all Shift Rotations
+export async function getAllShiftRotations(): Promise<ShiftRotation[]> {
+    return apiRequest('/shift-rotations');
+}
+
+// Get a single Shift Rotation's details
+export async function getShiftRotationDetails(rotationId: number): Promise<ShiftRotationDetails> {
+    return apiRequest(`/shift-rotations/${rotationId}`);
+}
+
+// Update a Shift Rotation (Drafts only)
+export async function updateShiftRotation(rotationId: number, data: {
+    rotation_name: string;
+    effective_from: string;
+    rotations: { employee_id: number; from_shift_id: number; to_shift_id: number }[];
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+// Submit for Approval
+export async function submitShiftRotationForApproval(rotationId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}/submit`, { method: 'PATCH' });
+}
+
+// Approve or Reject a Rotation
+export async function processShiftRotationApproval(rotationId: number, status: 'Approved' | 'Draft'): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}/approve`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+// Delete a Shift Rotation (Drafts only)
+export async function deleteShiftRotation(rotationId: number): Promise<void> {
+    await apiRequest(`/shift-rotations/${rotationId}`, { method: 'DELETE' });
+}
+
+
+
+export interface ReportResponse {
+  success: boolean;
+  message: string;
+  downloadUrl: string;
+  summary: any;
+}
+
+export const reportsApi = {
+  attendanceDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  attendanceMonthly: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/monthly", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  attendanceEmployee: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/employee-summary", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollCycle: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/cycle", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollSalary: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/salary-structure", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollCostCenter: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/cost-center", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveBalances: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/balances", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveEncashment: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/encashment", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  employeeDirectory: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/employee/directory", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  employeeDemographics: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/employee/demographics", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  performanceAppraisals: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/performance/appraisals", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  performanceGoals: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/performance/goals", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  hrCaseDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/cases/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  hrCaseSummary: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/cases/summary", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  loanApplications: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/loans/applications", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  loanRepayments: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/loans/repayments", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  expenseClaims: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/expenses/claims", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  auditUser: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/audit/user-changes", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  auditAttendance: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/audit/attendance-changes", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+};
+
+export function downloadFile(url: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "";
+  a.click();
 }
