@@ -12,7 +12,8 @@ import {
     getPayrollCycleDetails, 
     updatePayrollCycleStatus, 
     deletePayrollCycle,
-    type PayrollCycle 
+    type PayrollCycle, 
+    getAuditFlags
 } from "@/lib/api";
 
 // Import tab components
@@ -43,16 +44,21 @@ export default function PayrollCycleDetailPage() {
         try {
             setIsLoading(true);
             const data = await getPayrollCycleDetails(Number(cycleId));
+            const conflicts = await getAuditFlags(Number(cycleId))
             setCycle(data);
-            
+            console.log(conflicts)
             // Auto-select appropriate tab based on status
-            if (data.status === 'Draft') {
+            if(conflicts.length !== 0){
+                setActiveTab('audit')
+            }
+            else if (data.status === 'Draft') {
                 setActiveTab("audit");
             } else if (data.status === 'Auditing') {
                 setActiveTab("runs");
             } else if (data.status === 'Review') {
                 setActiveTab("review");
-            }
+            } 
+
         } catch (error: any) {
             toast({ 
                 title: "Error", 

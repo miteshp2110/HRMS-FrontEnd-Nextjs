@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { executePayrollGroupRun, updatePayrollCycleStatus, type PayrollCycle } from "@/lib/api";
+import { executePayrollGroupRun, getAuditFlags, runPrePayrollAudit, updatePayrollCycleStatus, verifyAudit, type PayrollCycle } from "@/lib/api";
 import { 
     Play, 
     Loader2, 
@@ -30,11 +30,54 @@ interface Props {
 export function RunsTab({ cycleId, cycleStatus, groupRuns, onExecute }: Props) {
     const { toast } = useToast();
     const [executingId, setExecutingId] = React.useState<number | null>(null);
+    const [isFlags,setIsFlags] = React.useState<boolean >(true);
+
+    React.useEffect(()=>{
+        checkAudits()
+    },[])
+
+    const checkAudits = async()=>{
+        try{
+            
+            const conflicts = await getAuditFlags(cycleId)
+            
+            if(conflicts.length===0){
+                setIsFlags(false)
+            }
+            else{
+                setIsFlags(true)
+                toast({ 
+                title: "Error", 
+                description: `Still there are flags , check audit`, 
+                variant: "destructive" 
+            });
+            }
+        }
+        catch(err){
+            toast({ 
+                title: "Error", 
+                description: `Failed to load`, 
+                variant: "destructive" 
+            });
+        }
+    }
 
     const handleExecute = async (groupId: number, groupName: string) => {
         setExecutingId(groupId);
         try {
-            const result = await executePayrollGroupRun(cycleId, groupId);
+            
+            await verifyAudit(cycleId)
+            const sureCheck = await getAuditFlags(cycleId)
+            if(sureCheck.length !== 0){
+                setIsFlags(true)
+                toast({ 
+                title: "Error", 
+                description: `Clear All Flags First`, 
+                variant: "destructive" 
+            });
+            }
+            else{
+                const result = await executePayrollGroupRun(cycleId, groupId);
             
             if (result.summary) {
                 toast({ 
@@ -51,6 +94,7 @@ export function RunsTab({ cycleId, cycleStatus, groupRuns, onExecute }: Props) {
             }
             
             onExecute();
+            }
         } catch (error: any) {
             toast({ 
                 title: "Error", 
@@ -188,7 +232,7 @@ export function RunsTab({ cycleId, cycleStatus, groupRuns, onExecute }: Props) {
                                                 <Button
                                                     size="sm"
                                                     onClick={() => handleExecute(run.group_id, run.group_name)}
-                                                    disabled={executingId !== null}
+                                                    disabled={executingId !== null || isFlags}
                                                     className="bg-orange-600 hover:bg-orange-700"
                                                 >
                                                     {executingId === run.group_id ? (
