@@ -9,6 +9,7 @@ import { getAllUserProfiles, searchUsers, type PaginatedResponse, type UserProfi
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { BulkUploadDialog } from "@/components/directory/bulk-upload-dialog"
 
 export default function DirectoryPage() {
   const { hasPermission } = useAuth()
@@ -17,6 +18,7 @@ export default function DirectoryPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [limit, setLimit] = useState(20)
   const [inActive,setInactive] = useState(false)
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   
   
   // State for the immediate input value
@@ -127,7 +129,7 @@ export default function DirectoryPage() {
           </div>
           <div>
             <CreateUserDialog onUserCreated={fetchUsers} />
-            <Button onClick={()=>{alert("Bulk Upload will be made availaible")}} className="ml-5.5 mr-2"><Upload/></Button>
+            <Button onClick={()=>{setIsUploadDialogOpen(true)}} className="ml-5.5 mr-2"><Upload/>Upload</Button>
           </div>
             
           
@@ -146,6 +148,7 @@ export default function DirectoryPage() {
             !isLoading && <p>No users found or an error occurred.</p>
         )}
       </div>
+      <BulkUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUploadSuccess={fetchUsers} />
     </MainLayout>
   )
 }

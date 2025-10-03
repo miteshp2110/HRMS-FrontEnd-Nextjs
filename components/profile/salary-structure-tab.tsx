@@ -12,6 +12,7 @@ import type { SalaryComponent, DetailedUserProfile } from "@/lib/api"
 import { updateUser, getDetailedUserProfile } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useParams } from "next/navigation"
+import { Button } from "../ui/button"
 
 interface SalaryStructureTabProps {
   salaryStructure: SalaryComponent[]
@@ -82,8 +83,9 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
   if (!salaryStructure || salaryStructure.length === 0) {
       return (
         <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Salary Structure</CardTitle>
+                <Button>Salary Management</Button>
             </CardHeader>
             <CardContent className="text-center py-12 text-muted-foreground">
                 <DollarSign className="h-10 w-10 mx-auto mb-4" />
@@ -131,6 +133,7 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
         <CardHeader>
             <div className="flex justify-between items-center">
                 <CardTitle>Settings</CardTitle>
+                <Button>Salary Management</Button>
             </div>
         </CardHeader>
         <CardContent>

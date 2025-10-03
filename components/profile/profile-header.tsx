@@ -1,17 +1,19 @@
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Mail, Phone, Calendar, User, Edit, X } from "lucide-react"
+import { Mail, Phone, Calendar, User, Edit, X, Eye } from "lucide-react"
 import type { DetailedUserProfile } from "@/lib/api"
 
 interface ProfileHeaderProps {
   profile: DetailedUserProfile
   isEditing: boolean
   onToggleEdit: () => void
+  onViewAuditHistory: () => void;
 }
 
-export function ProfileHeader({ profile, isEditing, onToggleEdit }: ProfileHeaderProps) {
+export function ProfileHeader({ profile, isEditing, onToggleEdit, onViewAuditHistory }: ProfileHeaderProps) {
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase()
   }
@@ -50,7 +52,7 @@ export function ProfileHeader({ profile, isEditing, onToggleEdit }: ProfileHeade
             <div className="flex justify-between items-start">
                 <div>
                     <h1 className="text-3xl font-bold text-balance">
-                        {profile.first_name} {profile.last_name}
+                        {profile.first_name} {profile.last_name} ({profile.full_employee_id})
                     </h1>
                     <div className="flex flex-wrap items-center gap-3 mt-2">
                         <p className="text-lg text-muted-foreground">{profile.job_title || "No job title"}</p>
@@ -58,10 +60,13 @@ export function ProfileHeader({ profile, isEditing, onToggleEdit }: ProfileHeade
                         {getStatusBadge(profile.is_active)}
                     </div>
                 </div>
-                <Button variant={isEditing ? "destructive" : "outline"} onClick={onToggleEdit}>
-                    {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
-                    {isEditing ? "Cancel Edit" : "Edit Profile"}
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" size="icon" onClick={onViewAuditHistory}><Eye className="h-4 w-4"/></Button>
+                    <Button variant={isEditing ? "destructive" : "outline"} onClick={onToggleEdit}>
+                        {isEditing ? <X className="h-4 w-4 mr-2" /> : <Edit className="h-4 w-4 mr-2" />}
+                        {isEditing ? "Cancel Edit" : "Edit Profile"}
+                    </Button>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

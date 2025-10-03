@@ -93,7 +93,7 @@ export function MyPersonalDetailsTab({ profile, isEditing, onSave, onCancel }: M
                     <AvatarFallback className="text-4xl">{profile.first_name[0]}{profile.last_name[0]}</AvatarFallback>
                 </Avatar>
                 {isEditing && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-0 opacity-100 transition-opacity">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full opacity-100 transition-opacity">
                        <Camera className="h-8 w-8 text-white"/>
                     </div>
                 )}

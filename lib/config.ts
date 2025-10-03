@@ -71,7 +71,7 @@ export const API_CONFIG = {
 
     // Reports
 
-    REPORT_PAYROLL_RUN: "/api/reports/payroll/run",
+    REPORT_PAYROLL_RUN: "/reports/payroll/run",
 
 
     // Bank Details

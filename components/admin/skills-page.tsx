@@ -120,11 +120,15 @@ export function SkillsPage() {
       </div>
     )
   }
-
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div/>
+        <div>
+          <h1 className="text-3xl font-bold">Skill Library</h1>
+          <p className="text-muted-foreground">Manage skills across organization</p>
+      <div/>
+        </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button>

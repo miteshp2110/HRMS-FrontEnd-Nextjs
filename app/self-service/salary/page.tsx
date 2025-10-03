@@ -28,7 +28,7 @@ export default function MySalaryPageRoute() {
     <MainLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">My Salary</h1>
+          <h1 className="text-3xl font-bold">My Salary (Under Patch)</h1>
           <p className="text-muted-foreground">A detailed breakdown of your current salary structure.</p>
         </div>
         <MySalaryPage />

@@ -15,9 +15,9 @@ export function CompanyAttendanceChart({ data }: CompanyAttendanceChartProps) {
   const chartData = [
     {
       name: "Today's Status",
-      Present: data.presentToday,
-      Absent: data.absentToday,
-      "On Leave": data.onLeaveToday,
+      Present: 10,
+      Absent: 15,
+      "On Leave": 5,
     },
   ]
 

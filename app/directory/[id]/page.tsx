@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -15,6 +16,7 @@ import { LoanHistoryTab } from "@/components/profile/loan-history-tab"
 import { LeaveHistoryTab } from "@/components/profile/leave-history-tab"
 import { EmployeeSkillsTab } from "@/components/profile/employee-skills-tab"
 import { EmployeeExpensesTab } from "@/components/profile/employee-expenses-tab"
+import { AuditHistoryDialog } from "@/components/profile/audit-history-dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -31,6 +33,7 @@ import {
   getEmployeeLeaveRecords,
   getUserSkills,
   getExpenses,
+  getUserAuditHistory,
   type DetailedUserProfile,
   type BankDetails,
   type EmployeeDocument,
@@ -40,6 +43,10 @@ import {
   type LeaveRecord,
   type UserSkill,
   type ExpenseRecord,
+  type UserAudit,
+  getOngoingLoans,
+  LoanApplication,
+  OngoingLoan,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
@@ -56,13 +63,15 @@ export default function EmployeeProfilePage() {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
   const [documents, setDocuments] = useState<EmployeeDocument[]>([])
   const [salaryStructure, setSalaryStructure] = useState<SalaryComponent[]>([])
-  const [loanHistory, setLoanHistory] = useState<LoanRecord[]>([])
+  const [loanHistory, setLoanHistory] = useState<OngoingLoan[]>([])
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([])
   const [leaveRecords, setLeaveRecords] = useState<LeaveRecord[]>([])
+  const [auditHistory, setAuditHistory] = useState<UserAudit[]>([]);
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingLeaves, setIsLoadingLeaves] = useState(false);
   const [activeTab, setActiveTab] = useState("personal")
   const [isEditing, setIsEditing] = useState(false)
+  const [isAuditHistoryOpen, setIsAuditHistoryOpen] = useState(false);
 
   const canManageUsers = hasPermission("user.manage")
   const canViewPayroll = hasPermission("payroll.manage")
@@ -85,11 +94,12 @@ export default function EmployeeProfilePage() {
           getDetailedUserProfile(employeeId),
           getBankDetails(employeeId),
           getEmployeeDocuments(employeeId),
-          getLoanHistory(employeeId),
+          getOngoingLoans(employeeId),
           getEmployeeLeaveBalance(employeeId),
           getEmployeeLeaveRecords(employeeId, firstDayOfMonth.toISOString().split('T')[0], today.toISOString().split('T')[0]),
           getUserSkills(employeeId),
           getExpenses(employeeId),
+          getUserAuditHistory(employeeId),
         ];
 
         const results = await Promise.all(promises.map(p => p.catch(e => {
@@ -118,14 +128,14 @@ export default function EmployeeProfilePage() {
 
         const [
           profileData, bankData, documentsData, loansData,
-          leaveBalanceData, initialLeaveRecords, skillsData, expensesData,
+          leaveBalanceData, initialLeaveRecords, skillsData, expensesData, auditData
         ] = results;
 
         setProfile(profileData as DetailedUserProfile | null);
         setBankDetails(bankData as BankDetails | null);
         setDocuments(documentsData as EmployeeDocument[] || []);
         if(canManageLoans && loansData){
-          setLoanHistory(loansData as LoanRecord[] || []);
+          setLoanHistory(loansData as OngoingLoan[] || []);
         }
         if(canManageLeaves && leaveBalanceData){
           setLeaveBalances(leaveBalanceData as LeaveBalance[] || []);
@@ -138,6 +148,9 @@ export default function EmployeeProfilePage() {
         }
         if(canManageExpense && expensesData){
           setExpenses(expensesData as ExpenseRecord[] || []);
+        }
+        if (auditData) {
+            setAuditHistory(auditData as UserAudit[] || []);
         }
         if (canViewPayroll && salaryData) {
           setSalaryStructure(salaryData as SalaryComponent[]);
@@ -171,10 +184,16 @@ export default function EmployeeProfilePage() {
 
   const handleSaveChanges = async (updatedData: Partial<DetailedUserProfile>) => {
     try {
-        await updateUser(employeeId, updatedData);
+        if(updatedData.inactive_reason==="@@##@@"){
+          fetchProfileData()
+        }
+        else{
+          await updateUser(employeeId, updatedData);
         toast({ title: "Success", description: "Profile updated successfully." });
         setIsEditing(false);
         fetchProfileData();
+        }
+        
     } catch(error: any) {
         toast({ title: "Update Failed", description: error.message || "Could not save changes.", variant: "destructive"});
     }
@@ -230,7 +249,7 @@ export default function EmployeeProfilePage() {
           <Link href="/directory"><ArrowLeft className="h-4 w-4 mr-2" />Back to Directory</Link>
         </Button>
 
-        <ProfileHeader profile={profile} isEditing={isEditing} onToggleEdit={handleToggleEdit} />
+        <ProfileHeader profile={profile} isEditing={isEditing} onToggleEdit={handleToggleEdit} onViewAuditHistory={() => setIsAuditHistoryOpen(true)} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:grid-cols-10">
@@ -240,7 +259,7 @@ export default function EmployeeProfilePage() {
             <TabsTrigger value="documents">Documents</TabsTrigger>
             {canViewPayroll?<TabsTrigger value="salary">Salary</TabsTrigger>:<></>}
             {canManageLeaves?<TabsTrigger value="leaves">Leaves</TabsTrigger>:<></>}
-            {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>}
+            {/* {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>} */}
             {canManageSkills?<TabsTrigger value="skills">Skills</TabsTrigger>:<></>}
             {canManageExpense ?<TabsTrigger value="expenses">Expenses</TabsTrigger>:<></>}
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
@@ -262,16 +281,18 @@ export default function EmployeeProfilePage() {
                 onCancel={handleToggleEdit}
               />
           </TabsContent>
-          <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} /></TabsContent>
+          <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} employeeId={employeeId} onUpdate={fetchProfileData} /></TabsContent>
           <TabsContent value="documents"><DocumentsTab documents={documents} isLoading={isLoading} /></TabsContent>
           {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
-          <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent>
+          {/* <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent> */}
           <TabsContent value="skills"><EmployeeSkillsTab skills={skills} isLoading={isLoading} /></TabsContent>
           <TabsContent value="expenses"><EmployeeExpensesTab initialExpenses={expenses} employeeId={employeeId} isLoading={isLoading} /></TabsContent>
           <TabsContent value="attendance"><AttendanceHeatmap employeeId={employeeId} /></TabsContent>
         </Tabs>
       </div>
+      <AuditHistoryDialog auditHistory={auditHistory} open={isAuditHistoryOpen} onOpenChange={setIsAuditHistoryOpen} />
     </MainLayout>
   )
 }
+

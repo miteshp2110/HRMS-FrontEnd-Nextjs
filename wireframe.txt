@@ -1,0 +1,57 @@
+1. Attendance Flow 
+2. Name Series (Static)
+3. Journals and flow for loans and others
+4. Calulations of salary components
+5. Leave Salary (ggoogle study)
+6. payroll flow 
+7. offboarding
+8. salary bands (what to do , other then defining and assigning it to employees)
+9. any other imp feature
+
+
+///////
+** curreny setup**
+0. Sticky sidebar
+1. Sepeation of the admin and normal dashboard
+2. all things created_at and updated_at
+3. User inactive_at , inactive_reason
+4. edit bank_details by admin , 
+5. Manage documents (href to manage documents), salary manage (href) in directory
+6. Href for salary management in directory
+7. Make HRA as settings and in a tab format rather that all at once
+8. What if primary approver is not avl 
+9. Rewrite the attendance record , with more simplified 
+//overetime and attendnace
+***employee can apply for overtime 
+10. overtime showing , edit , reject , filters , showing of the calclations, with legder also comment
+11. select all update status 
+12. while uploading the document (dynamic expiring status reminder)
+13. visulize the skill matrix
+//loans
+*** take in account the remaining days , for adanvances***
+14. employee dont get to set the repayment installments
+15. more detailing in the loan management 
+16. a another staging after approng the loan , after the loan is appoved , accounting stage for futher acconting and cashing out
+// expense claims
+17. add expense slips also , a ledger like , employee can add the expense claims , and can be approved by the hr, also a utr for repayment for accountancy
+// payroll
+*** add overtime and other components as component and comphrensive formulas for calculating each component
+18. Show all employees in salary management with search
+** Add a precheck for payroll for elibibility***
+19. In payroll runs another draft state , after reviewing each employees salary payslip the manager will get for approval
+20. very detailed payslip with calculations of each component with approval for each , also assigning a mass components
+21. payroll groups 
+22. after that each update again approval needed , after complte approval then in drafted , after the drafted paid
+*** ALso add a UTR for each money related trasanction 
+// after finilize the payslip , when paid , then only updated all the loans 
+
+** employee should see the all hours and adjusted for overtime , in all case
+
+//new feature
+1. Name series for all 
+2. manual id for each User
+3. leave salary (should be paid , but not in the payroll cycle)
+4. employee off bording
+5. salary band
+
+** log entries

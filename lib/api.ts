@@ -12,11 +12,7 @@ export interface LoanRepayment {
 }
 
 
-export interface LeaveBalance {
-  id: number
-  leave_type_name: string
-  balance: number
-}
+
 export interface LeaveRecord{
   id:number,
   leave_type_name:string,      
@@ -25,32 +21,34 @@ export interface LeaveRecord{
   from_date: Date,
   to_date: Date,
   rejection_reason: string | null,
-  primary_status: Boolean | null,
-  secondry_status: Boolean | null,
+  primary_status: Boolean | null | number,
+  secondry_status: Boolean | null | number,
   primary_approver_name: string | null,
   secondary_approver_name: string | null,
   employee_id: number,
   employee_name:string,
-  primary_user : number
+  primary_user : number,
+  full_leave_id:string
 }
-export interface AttendanceRecord {
-  id: number
-  attendance_date: string
-  shift: number
-  punch_in: string | null
-  punch_out: string | null
-  hours_worked: string | null
-  attendance_status: "present" | "absent" | "leave" | "late"
-  pay_type: "full_day" | "half_day" | "unpaid" | "leave" | "overtime" | "no_punch_out"
-  overtime_status: string | null
-  overtime_approved_by: string | null
-  created_at: string
-  updated_at: string
-  updated_by: string
-  first_name: string
-  last_name: string
-  employee_id: number
-}
+
+// export interface AttendanceRecord {
+//   id: number
+//   attendance_date: string
+//   shift: number
+//   punch_in: string | null
+//   punch_out: string | null
+//   hours_worked: string | null
+//   attendance_status: "present" | "absent" | "leave" | "late"
+//   pay_type: "full_day" | "half_day" | "unpaid" | "leave" | "overtime" | "no_punch_out"
+//   overtime_status: string | null
+//   overtime_approved_by: string | null
+//   created_at: string
+//   updated_at: string
+//   updated_by: string
+//   first_name: string
+//   last_name: string
+//   employee_id: number
+// }
 
 export interface DashboardStats {
   pendingLeaveApprovals: number
@@ -72,6 +70,7 @@ export interface UserProfile {
   is_active: boolean
   role_name: string
   job_title?: string
+  full_employee_id:string
 }
 
 export interface DetailedUserProfile {
@@ -95,13 +94,26 @@ export interface DetailedUserProfile {
   shift_name?: string
   is_probation?: boolean
   salary_visibility?: boolean
+  inactive_date?:string
+  inactive_reason?:string
+  is_payroll_exempt:boolean
+  nationality:string,
+  inactivated_by_name:string
+  inactivated_by:number
+  full_employee_id:string
+  shift_id : number
+
 }
 
 export interface BankDetails {
+  id:number
   user_id: number
   bank_name: string
   bank_account: string
   bank_ifsc: string
+  created_at : string
+  updated_at : string
+  updated_by_name:string
 }
 
 export interface EmployeeDocument {
@@ -202,6 +214,7 @@ export interface ExpenseSummary{
 export interface DocumentType {
   id: number
   name: string
+  reminder_threshold:number
 }
 
 export interface Holiday {
@@ -336,6 +349,7 @@ export interface LeaveType {
   accurable: boolean
   accural_rate: number
   max_balance: number
+  is_encashable :boolean
 }
 
 
@@ -402,6 +416,7 @@ export interface LeaveRecordHistory {
   primary_approver_name: string | null;
   secondary_approver_name: string | null;
   your_approval_level?: "primary" | "secondary";
+  full_leave_id:string
 }
 
 export interface SkilledEmployee {
@@ -697,14 +712,14 @@ export async function getDocumentTypes(): Promise<DocumentType[]> {
   return apiRequest<DocumentType[]>(API_CONFIG.ENDPOINTS.DOCUMENT_TYPES)
 }
 
-export async function createDocumentType(data: { name: string }): Promise<DocumentType> {
+export async function createDocumentType(data: { name: string, reminder_threshold:number }): Promise<DocumentType> {
   return apiRequest<DocumentType>(API_CONFIG.ENDPOINTS.DOCUMENT_TYPES, {
     method: "POST",
     body: JSON.stringify(data),
   })
 }
 
-export async function updateDocumentType(id: number, data: { name: string }): Promise<void> {
+export async function updateDocumentType(id: number, data: { name: string, reminder_threshold:number }): Promise<void> {
   await apiRequest(`${API_CONFIG.ENDPOINTS.DOCUMENT_TYPES}/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
@@ -862,9 +877,9 @@ export async function updateLoanStatus(loanId: number, status: "approved" | "rej
 }
 
 
-export async function getExpenseClaims(): Promise<ExpenseApproval[]> {
-    return apiRequest<ExpenseApproval[]>(API_CONFIG.ENDPOINTS.EXPENSE_APPROVALS);
-}
+// export async function getExpenseClaims(): Promise<ExpenseApproval[]> {
+//     return apiRequest<ExpenseApproval[]>(API_CONFIG.ENDPOINTS.EXPENSE_APPROVALS);
+// }
 
 export async function updateExpenseStatus(expenseId: number, status: "approved" | "rejected"): Promise<void> {
     await apiRequest(`/expense/${expenseId}`, {
@@ -939,24 +954,39 @@ export async function updateUser(
 }
 
 export async function updateSelfProfile(
-  data:FormData | Partial<DetailedUserProfile>,
+  data: FormData | Partial<DetailedUserProfile>,
 ): Promise<{ success: boolean; message: string }> {
-  
-  const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SELF}`, {
-        method: 'PATCH',
-        headers: {
-            Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
-        },
-        body: data instanceof FormData?data:JSON.stringify(data),
-    });
 
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new ApiError(response.status, errorData.message || 'API request failed', errorData);
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("hr_token") || ""}`,
+  }
+
+  // Add Content-Type only if NOT FormData
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+
+  const response = await fetch(
+    `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.SELF}`,
+    {
+      method: "PATCH",
+      headers,
+      body: data instanceof FormData ? data : JSON.stringify(data),
     }
+  )
 
-    return await response.json();
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new ApiError(
+      response.status,
+      errorData.message || "API request failed",
+      errorData
+    )
+  }
+
+  return await response.json()
 }
+
 
 export async function getCurrentUserProfile(): Promise<DetailedUserProfile> {
   return apiRequest<DetailedUserProfile>(API_CONFIG.ENDPOINTS.USER_PROFILE)
@@ -1148,9 +1178,9 @@ export async function requestLeave(data: {
   })
 }
 
-export async function getMyLeaveRecords(): Promise<LeaveBalance[]> {
-  return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.LEAVE_RECORDS)
-}
+// export async function getMyLeaveRecords(): Promise<LeaveBalance[]> {
+//   return apiRequest<LeaveBalance[]>(API_CONFIG.ENDPOINTS.LEAVE_RECORDS)
+// }
 
 export async function deleteLeaveRequest(recordId: number): Promise<void> {
   await apiRequest(`${API_CONFIG.ENDPOINTS.LEAVE_REQUEST}/${recordId}`, {
@@ -1305,27 +1335,51 @@ export async function getAttendanceRecords(): Promise<AttendanceRecord[]> {
 }
 
 
-export async function getAllAttendance(params?: {
-  employee_id?: number
-  shift_id?: number
-  date?: string
-  week?: number
-  month?: number
-  year?: number
-  page?: number
-  limit?: number
-}): Promise<AttendanceRecord[]> {
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined) {
-        searchParams.append(key, value.toString())
-      }
-    })
-  }
+// export async function getAllAttendance(params?: {
+//   employee_id?: number
+//   shift_id?: number
+//   date?: string
+//   week?: number
+//   month?: number
+//   year?: number
+//   page?: number
+//   limit?: number
+// }): Promise<AttendanceRecord[]> {
+//   const searchParams = new URLSearchParams()
+//   if (params) {
+//     Object.entries(params).forEach(([key, value]) => {
+//       if (value !== undefined) {
+//         searchParams.append(key, value.toString())
+//       }
+//     })
+//   }
 
-  const endpoint = `${API_CONFIG.ENDPOINTS.ATTENDANCE_ALL}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
-  return apiRequest<AttendanceRecord[]>(endpoint)
+//   const endpoint = `${API_CONFIG.ENDPOINTS.ATTENDANCE_ALL}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
+//   return apiRequest<AttendanceRecord[]>(endpoint)
+// }
+export async function getAllAttendance(
+  params: {
+    employee_id?: number;
+    shift_id?: number;
+    date?: string; // Changed from day, month, year to a single date string
+    week?: number;
+    month?: number;
+    year?: number;
+    page?: number;
+    limit?: number;
+  } = {}
+): Promise<AttendanceRecord[]> {
+  const query = new URLSearchParams();
+  if (params.employee_id) query.append("employee_id", String(params.employee_id));
+  if (params.shift_id) query.append("shift_id", String(params.shift_id));
+  if (params.date) query.append("date", params.date);
+  if (params.week) query.append("week", String(params.week));
+  if (params.month) query.append("month", String(params.month));
+  if (params.year) query.append("year", String(params.year));
+  if (params.page) query.append("page", String(params.page));
+  if (params.limit) query.append("limit", String(params.limit));
+
+  return apiRequest<AttendanceRecord[]>(`/attendance/all?${query.toString()}`);
 }
 
 export async function updateAttendancePayType(
@@ -1346,9 +1400,7 @@ export async function approveOvertime(recordId: number, status: 0 | 1): Promise<
 }
 
 // Calendar/Holiday Management APIs
-export async function getWorkWeek(): Promise<Array<{ day_of_week: string; is_working_day: boolean }>> {
-  return apiRequest<Array<{ day_of_week: string; is_working_day: boolean }>>(API_CONFIG.ENDPOINTS.WORK_WEEK)
-}
+
 
 export async function updateWorkWeek(
   data: Array<{ day_of_week: string; is_working_day: boolean }>,
@@ -1421,33 +1473,33 @@ export async function editLoan(
 }
 
 // Salary Structure Management APIs
-export async function assignSalaryComponent(
-  employeeId: number,
-  data: {
-    component_id: number
-    value_type: "fixed" | "percentage"
-    value: number
-    based_on_component_id?: number
-  },
-): Promise<{ success: boolean; message: string }> {
-  return apiRequest<{ success: boolean; message: string }>(
-    `${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}`,
-    {
-      method: "POST",
-      body: JSON.stringify(data),
-    },
-  )
-}
+// export async function assignSalaryComponent(
+//   employeeId: number,
+//   data: {
+//     component_id: number
+//     value_type: "fixed" | "percentage"
+//     value: number
+//     based_on_component_id?: number
+//   },
+// ): Promise<{ success: boolean; message: string }> {
+//   return apiRequest<{ success: boolean; message: string }>(
+//     `${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}`,
+//     {
+//       method: "POST",
+//       body: JSON.stringify(data),
+//     },
+//   )
+// }
 
 export async function getMySalaryStructure(): Promise<SalaryComponent[]> {
   return apiRequest<SalaryComponent[]>(API_CONFIG.ENDPOINTS.MY_SALARY_STRUCTURE)
 }
 
-export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
-  await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
-    method: "DELETE",
-  })
-}
+// export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
+//   await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
+//     method: "DELETE",
+//   })
+// }
 
 export async function updateSalaryComponent(employeeId: number, componentId: number,data:Partial<SalaryComponent>): Promise<{ success: boolean; message: string }> {
   return await apiRequest(`${API_CONFIG.ENDPOINTS.PAYROLL_STRUCTURE(employeeId.toString())}/components/${componentId}`, {
@@ -1473,7 +1525,7 @@ export async function downloadPayrollReport(payrollId: number): Promise<void> {
   const token = localStorage.getItem('hr_token'); 
 
   try {
-    const response = await fetch(`https://hrms-backend-two.vercel.app/api/reports/payroll/run/${payrollId}`, {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/${API_CONFIG.ENDPOINTS.REPORT_PAYROLL_RUN}/${payrollId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -1521,4 +1573,1830 @@ export async function downloadPayrollReport(payrollId: number): Promise<void> {
     // Re-throw the error so the component can catch it and show a notification
     throw error;
   }
+}
+
+
+export interface NameSeries {
+  id: number;
+  table_name: string;
+  prefix: string;
+  padding_length: number;
+  created_at: string;
+  updated_at: string;
+  updated_by_name: string;
+}
+
+export async function getNameSeries(): Promise<NameSeries[]> {
+    return apiRequest<NameSeries[]>('/settings/name-series');
+}
+
+export async function createNameSeries(data: { table_name: string; prefix: string; padding_length: number }): Promise<NameSeries> {
+    return apiRequest<NameSeries>('/settings/name-series', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function updateNameSeries(id: number, data: { table_name: string; prefix: string; padding_length: number }): Promise<void> {
+    await apiRequest(`/settings/name-series/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function deactivateUser(userId: number, inactive_reason: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`/user/deactivate/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ inactive_reason }),
+  });
+}
+
+export interface UserAudit {
+  audit_id: number;
+  field_changed: string;
+  old_value: string;
+  new_value: string;
+  updated_at: string;
+  updated_by_name: string;
+  updated_by : number
+}
+
+export async function getUserAuditHistory(userId: number): Promise<UserAudit[]> {
+  return apiRequest<UserAudit[]>(`/user/audit/${userId}`);
+}
+
+
+
+export async function downloadUserTemplate(): Promise<void> {
+  const token = localStorage.getItem('hr_token');
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/user/template`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to download template.');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = 'user_template.xlsx'; // Default filename
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch.length > 1) {
+            filename = filenameMatch[1];
+        }
+    }
+    link.setAttribute('download', filename);
+
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode!.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Download error:', error);
+    throw error;
+  }
+}
+
+export async function bulkUploadUsers(formData: FormData): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/user/bulk-upload`, {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${localStorage.getItem("hr_token")}`,
+            // Don't set Content-Type, browser does it for FormData
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, errorData.message || 'API request failed', errorData);
+    }
+
+    return await response.json();
+}
+
+export interface AttendanceRecord {
+  id: number;
+  attendance_date: string;
+  punch_in: string | null;
+  punch_out: string | null;
+  hours_worked: string | null;
+  attendance_status: "Present" | "Absent" | "Leave" | "Half-Day";
+  is_late: number;
+  is_early_departure: number;
+  short_hours: string | null;
+  first_name: string;
+  last_name: string;
+  updated_by_name: string;
+  overtime_hours: string | null;
+  overtime_status: "pending_approval" | "approved" | "rejected" | null;
+  employee_id: number;
+  rejection_reason?:string
+  overtime_processed_by?:string
+}
+
+export interface OvertimeRecord {
+    id: number;
+    attendance_record_id: number | null;
+    employee_id: number;
+    request_date: string;
+    overtime_hours: string;
+    approved_hours: string;
+    status: "pending_approval" | "approved" | "rejected";
+    overtime_type: "regular" | "holiday";
+    overtime_start: string;
+    overtime_end: string;
+    processed_by: number | null;
+    processed_at: string | null;
+    rejection_reason: string | null;
+    employee_name: string;
+}
+
+export async function getOvertimeApprovals(employee_id?:number): Promise<OvertimeRecord[]> {
+  let path = '/attendance/overtime/approvals'
+  if(employee_id){
+    path = `/attendance/overtime/approvals/${employee_id}`
+  }
+  return apiRequest<OvertimeRecord[]>(path);
+}
+
+export async function processOvertimeRequest(overtimeId: number, data: { status: 'approved' | 'rejected', approved_hours?: number, rejection_reason?: string }): Promise<void> {
+    await apiRequest(`/attendance/overtime/process/${overtimeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export async function editOvertimeRequest(overtimeId: number, data: Partial<OvertimeRecord>): Promise<void> {
+    await apiRequest(`/attendance/overtime/edit/${overtimeId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export interface AttendanceSummary {
+    total_hours_worked: string;
+    total_short_hours: string;
+    late_days: number;
+    early_departures: number;
+    absent_days: number;
+    leave_days: number;
+    present_days: number;
+    half_days: number;
+    overtime: {
+        requested: string;
+        approved: string;
+        rejected: string;
+    };
+}
+
+
+export async function getAttendanceRecordById(recordId: number): Promise<AttendanceRecord> {
+  return apiRequest<AttendanceRecord>(`/attendance/${recordId}`);
+}
+
+export async function getAttendanceSummary(employeeId: number, year: number, month: number): Promise<AttendanceSummary> {
+  return apiRequest<AttendanceSummary>(`/attendance/summary/${employeeId}/${year}/${month}`);
+}
+
+export interface Holiday {
+  id: number;
+  name: string;
+  holiday_date: string;
+}
+
+export async function getHoliday(year: number): Promise<Holiday[]> {
+    return apiRequest<Holiday[]>(`/settings/holidays?year=${year}`);
+}
+
+export interface UserByShift{
+  id: number
+  first_name:string
+  last_name :string
+  full_employee_id:string
+}
+export async function getUserByShift(shiftId: number): Promise<UserByShift[]> {
+    return apiRequest<UserByShift[]>(`${API_CONFIG.BASE_URL}/${API_CONFIG.ENDPOINTS.SHIFTS}/${shiftId}/users`);
+}
+// export async function getUserWithUnmarkedAttendance(shiftId: number,date:string): Promise<UserByShift[]> {
+//     return apiRequest<UserByShift[]>(`${API_CONFIG.ENDPOINTS.SHIFTS}/${shiftId}/unmarked-attendance/${date}`);
+// }
+
+export async function getUserWithUnmarkedAttendance(shiftId: number, date: string, punchoutOnly?: boolean): Promise<UserByShift[]> {
+    const url = `/shifts/${shiftId}/unmarked-attendance/${date}${punchoutOnly ? '?punchout=true' : ''}`;
+    return apiRequest<UserByShift[]>(url);
+}
+
+export async function bulkCreateAttendance(data: {
+  reason: string;
+  attendance_date: string;
+  punch_in_local?: string;
+  punch_out_local?: string;
+  timezone: string;
+  is_late?: boolean;
+  is_early_departure?: boolean;
+  records: { employee_id: number }[];
+}): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>('/attendance/bulk', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+
+export async function getLeaveRecordById(id: number): Promise<LeaveRecord> {
+  return apiRequest<LeaveRecord>(`${API_CONFIG.ENDPOINTS.LEAVES}/${id}`);
+}
+
+export async function downloadLeaveApplication(leaveId: number): Promise<void> {
+  const token = localStorage.getItem('hr_token'); 
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/leaves/download/${leaveId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(response.status, errorData.message || 'Failed to download the leave application.');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    
+    const contentDisposition = response.headers.get('content-disposition');
+    let filename = `Leave_Application_${leaveId}.pdf`; // Default
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+      if (filenameMatch && filenameMatch.length > 1) {
+        filename = filenameMatch[1];
+      }
+    }
+    
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download error:', error);
+    throw error;
+  }
+}
+
+
+export interface LeaveLedgerEntry {
+  id: number;
+  transaction_date: string;
+  transaction_type: "deduction" | "accrual" | "adjustment";
+  previous_balance: string;
+  change_amount: string;
+  new_balance: string;
+  leave_record_id: number | null;
+  leave_type_name: string;
+}
+
+export async function getLeaveLedger(employeeId: number, leaveTypeId: number): Promise<LeaveLedgerEntry[]> {
+  return apiRequest<LeaveLedgerEntry[]>(`/leaves/ledger/${employeeId}?leave_type_id=${leaveTypeId}`);
+}
+
+export interface WorkWeekDay {
+  day_of_week: string;
+  is_working_day: boolean;
+}
+
+// ... existing code ...
+
+export async function getMyLeaveRecords(startDate?: string, endDate?: string): Promise<LeaveRecord[]> {
+  const params = new URLSearchParams()
+  if (startDate) params.append("startDate", startDate)
+  if (endDate) params.append("endDate", endDate)
+  return apiRequest<LeaveRecord[]>(`${API_CONFIG.ENDPOINTS.LEAVE_RECORDS}?${params.toString()}`)
+}
+
+export async function getWorkWeek(): Promise<Array<{ day_of_week: string; is_working_day: boolean }>> {
+  return apiRequest<Array<{ day_of_week: string; is_working_day: boolean }>>(API_CONFIG.ENDPOINTS.WORK_WEEK)
+}
+
+export interface SkillMatrixData {
+  id: number;
+  skill_name: string;
+  employee_count: number;
+}
+
+export async function getSkillMatrix(): Promise<SkillMatrixData[]> {
+  return apiRequest<SkillMatrixData[]>('/skillMatrix/matrix');
+}
+
+
+// ... (existing code at the top of the file)
+
+// EXPENSE MANAGEMENT INTERFACES
+export interface ExpenseCategory {
+  id: number;
+  name: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  updated_by: number;
+}
+
+export interface ExpenseClaim {
+  id: number;
+  claim_type: 'Reimbursement' | 'Advance';
+  employee_id: number;
+  category_id: number;
+  title: string;
+  description?: string;
+  amount: number;
+  expense_date: string;
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Reimbursed';
+  receipt_url?: string;
+  rejection_reason?: string | null;
+  transaction_id?: string | null;
+  approved_by?: number | null;
+  processed_by?: number | null;
+  created_at: string;
+  updated_at: string;
+  category_name: string;
+  employee_name: string;
+  approver_name?: string | null;
+  processor_name?: string | null;
+  reimbursement_method?:string | null;
+  reimbursed_in_payroll_id?:number | null
+}
+
+// ... (rest of the interfaces)
+
+// EXPENSE CATEGORY FUNCTIONS
+export async function getExpenseCategories(): Promise<ExpenseCategory[]> {
+  return apiRequest<ExpenseCategory[]>('/expense/categories');
+}
+
+export async function createExpenseCategory(data: { name: string; description?: string }): Promise<{ success: boolean; message: string; categoryId: number }> {
+  return apiRequest('/expense/categories', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateExpenseCategory(id: number, data: { name: string; description?: string }): Promise<void> {
+  await apiRequest(`/expense/categories/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deleteExpenseCategory(id: number): Promise<void> {
+  await apiRequest(`/expense/categories/${id}`, { method: 'DELETE' });
+}
+
+
+export async function submitExpenseClaim(
+  data: FormData ,
+): Promise<{ success: boolean; message: string }> {
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${localStorage.getItem("hr_token") || ""}`,
+  }
+
+  // Add Content-Type only if NOT FormData
+  if (!(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json"
+  }
+
+  const response = await fetch(
+    `${API_CONFIG.BASE_URL}/expense/claim`,
+    {
+      method: "POST",
+      headers,
+      body: data instanceof FormData ? data : JSON.stringify(data),
+    }
+  )
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new ApiError(
+      response.status,
+      errorData.message || "API request failed",
+      errorData
+    )
+  }
+
+  return await response.json()
+}
+
+export async function  updateExpenseClaim(data:{title:string,description:string,amount:number},id:number):Promise<{success: boolean; message: string;}>{
+  return apiRequest(`/expense/claims/${id}`,{method:'PATCH',body:JSON.stringify(data)})
+}
+export async function  deleteExpenseClaim(id:number):Promise<{success: boolean; message: string;}>{
+  return apiRequest(`/expense/claims/${id}`,{method:'DELETE'})
+}
+// EXPENSE CLAIMS & ADVANCES FUNCTIONS
+// export async function submitExpenseClaim(formData: FormData): Promise<{ success: boolean; message: string; claimId: number }> {
+//   // For multipart requests, the body is passed directly without stringifying
+//   return apiRequest('/expense/claim', { method: 'POST', body: formData, multipart: true });
+// }
+
+
+
+export async function getExpenseClaims(params?: { employee_id?: number; status?: string; claim_type?: string }): Promise<ExpenseClaim[]> {
+  const query = new URLSearchParams();
+  if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+  if (params?.status) query.append('status', params.status);
+  if (params?.claim_type) query.append('claim_type', params.claim_type);
+  const queryString = query.toString();
+  return apiRequest<ExpenseClaim[]>(`/expense/claims${queryString ? `?${queryString}` : ''}`);
+}
+
+// APPROVAL WORKFLOW FUNCTIONS
+export async function getExpenseApprovals(): Promise<ExpenseClaim[]> {
+  return apiRequest<ExpenseClaim[]>('/expense/approvals');
+}
+
+export async function processExpenseClaim(claimId: number, data: { status: 'Approved' | 'Rejected'; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/process/${claimId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function reimburseExpenseClaim(claimId: number, data: { transaction_id: string,reimbursement_method:string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/reimburse/${claimId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function adminUpdateExpense(claimId: number, data: Partial<ExpenseClaim>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/admin/claim/${claimId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function createExpenseAdvance(data: { 
+  employee_id: number; 
+  category_id: number; 
+  title: string; 
+  description?: string; 
+  amount: number; 
+  expense_date: string; 
+}): Promise<{ success: boolean; message: string; claimId: number }> {
+  return apiRequest('/expense/advance', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function reimburseAdvance(claimId: number, transaction_id: string): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/expense/advance/reimburse/${claimId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ transaction_id }),
+  });
+}
+
+
+export async function getProcessedClaims(startDate?: string, endDate?: string): Promise<ExpenseClaim[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  const queryString = params.toString();
+  return apiRequest(`/expense/claims/processed${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function getUpcomingPayrollReimbursements(startDate?: string, endDate?: string): Promise<ExpenseClaim[]> {
+  const params = new URLSearchParams();
+  if (startDate) params.append('startDate', startDate);
+  if (endDate) params.append('endDate', endDate);
+  const queryString = params.toString();
+  return apiRequest(`/expense/claims/upcoming-payroll${queryString ? `?${queryString}` : ''}`);
+}
+
+export interface LoanType {
+  id: number;
+  name: string;
+  is_advance: boolean;
+  interest_rate: number;
+  max_tenure_months: number;
+  eligibility_percentage: number;
+}
+
+export interface LoanEligibility {
+  eligible_base_amount: number;
+  eligible_products: Array<{
+    loan_type_id: number;
+    name: string;
+    is_advance: boolean;
+    interest_rate: number;
+    max_tenure_months: number;
+    max_eligible_amount: number;
+  }>;
+}
+export interface Repayment {
+    id: number;
+    loan_application_id: number;
+    schedule_id: number;
+    payslip_id: number | null;
+    repayment_amount: string;
+    repayment_date: string;
+    transaction_id: string | null;
+    created_at: string;
+}
+
+
+export interface LoanApplication {
+  id: number;
+  application_id_text: string;
+  employee_id: number;
+  loan_type_id: number;
+  requested_amount: string;
+  approved_amount: string | null;
+  tenure_months: number;
+  emi_amount: string | null;
+  interest_rate: string;
+  purpose: string | null;
+  status: 'Pending Approval' | 'Approved' | 'Rejected' | 'Disbursed' | 'Closed';
+  manager_approver_id: number | null;
+  hr_approver_id: number | null;
+  rejection_reason: string | null;
+  disbursement_date: string | null;
+  jv_number: string | null;
+  created_at: string;
+  updated_at: string;
+  loan_type_name: string;
+  is_advance: number; // is_advance is 0 or 1
+  employee_name: string;
+  manager_approver_name: string | null;
+  hr_approver_name: string | null;
+  amortization_schedule: AmortizationEntry[];
+  manual_repayments: Repayment[];
+}
+
+export interface AmortizationEntry {
+  id: number;
+  loan_application_id: number;
+  due_date: string;
+  emi_amount: string;
+  principal_component: string;
+  interest_component: string;
+  status: 'Pending' | 'Paid';
+  repayment_id: number | null;
+}
+export interface ManualRepayment {
+  id: number;
+  schedule_id: number;
+  repayment_date: string;
+  transaction_id: string;
+}
+
+export interface OngoingLoan {
+    id: number;
+    application_id_text: string;
+    approved_amount: string;
+    emi_amount: string;
+    tenure_months: number;
+    loan_type_name: string;
+    emis_paid: number;
+    total_emis: number;
+}
+
+
+export async function getOngoingLoans(employeeId: number): Promise<OngoingLoan[]> {
+    return apiRequest(`/loans/applications/ongoing/${employeeId}`);
+}
+
+// Loan Type Management
+export async function getLoanTypes(): Promise<LoanType[]> {
+  return apiRequest('/loans/types');
+}
+
+export async function createLoanType(data: Partial<LoanType>): Promise<{ success: boolean; message: string; loanTypeId: number }> {
+  return apiRequest('/loans/types', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateLoanType(id: number, data: Partial<LoanType>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/types/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee Application Process
+export async function getLoanEligibility(): Promise<LoanEligibility> {
+  return apiRequest('/loans/eligibility');
+}
+
+export async function applyForLoan(data: { loan_type_id: number; requested_amount: number; tenure_months: number; purpose: string }): Promise<{ success: boolean; message: string; applicationId: number; application_id_text: string }> {
+  return apiRequest('/loans/apply', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Approval & Disbursement Workflow
+export async function getPendingApprovals(): Promise<LoanApplication[]> {
+  return apiRequest('/loans/approvals');
+}
+
+export async function processLoanApplication(applicationId: number, data: { status: 'Approved' | 'Rejected'; approved_amount?: number; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/process/${applicationId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function disburseLoan(applicationId: number, data: { disbursement_date: string; jv_number: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/disburse/${applicationId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Viewing & Tracking Applications
+export async function getLoanApplications(): Promise<LoanApplication[]> {
+  return apiRequest('/loans/applications');
+}
+export async function getLoanApplicationsByEmployee(employeeId:number): Promise<LoanApplication[]> {
+  return apiRequest(`/loans/applications?employee_id=${employeeId}`);
+}
+
+export async function getLoanApplicationDetails(applicationId: number): Promise<LoanApplication> {
+  return apiRequest(`/loans/applications/${applicationId}`);
+}
+
+// Repayment & Closure
+export async function manualRepayment(scheduleId: number, data: { repayment_date: string; transaction_id: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/repayment/manual/${scheduleId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function forecloseLoan(applicationId: number): Promise<{ success: boolean; message: string; final_settlement_amount: number }> {
+  return apiRequest(`/loans/foreclose/${applicationId}`, { method: 'POST' });
+}
+
+export async function adminUpdateLoanApplication(applicationId: number, data: { approved_amount?: number; interest_rate?: number, tenure_months?: number }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/loans/admin/update/${applicationId}`, { 
+    method: 'PATCH', 
+    body: JSON.stringify(data) 
+  });
+}
+
+
+export async function downloadLoanAgreement(applicationId: number, fileName: string): Promise<void> {
+  const token = localStorage.getItem("hr_token");
+  const response = await fetch(`${API_CONFIG.BASE_URL}/loans/download/${applicationId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to download file.');
+  }
+
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${fileName}.pdf` || 'loan-agreement.pdf';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+
+
+export interface PayrollComponentDef {
+  id: number;
+  name: string;
+  type: 'earning' | 'deduction';
+}
+
+export interface PayrollParameter {
+    name: string;
+    value: string;
+}
+
+export interface FormulaComponent {
+    type: 'component' | 'standard_parameter' | 'number' | 'operator' | 'parenthesis';
+    value: string;
+}
+
+// Updated interface to match the detailed API response
+export interface EmployeeSalaryStructure {
+    id: number;
+    component_name: string;
+    component_type: 'earning' | 'deduction';
+    calculation_type: 'Fixed' | 'Percentage' | 'Formula';
+    value: string | null; // Value can be a number or percentage
+    custom_formula: FormulaComponent[] | null;
+    based_on_component_name: string | null;
+    component_id: number;
+    calculated_amount: number;
+}
+
+
+// Manage Payroll Component Definitions
+export async function createPayrollComponentDef(data: { name: string; type: 'earning' | 'deduction' }): Promise<{ success: boolean; message: string; component: PayrollComponentDef }> {
+  return apiRequest('/payroll/components', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
+//   return apiRequest('/payroll/components');
+// }
+
+export async function updatePayrollComponentDef(id: number, data: { name?: string; type?: 'earning' | 'deduction' }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/payroll/components/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function deletePayrollComponentDef(id: number): Promise<void> {
+  await apiRequest(`/payroll/components/${id}`, { method: 'DELETE' });
+}
+
+
+// Fetch Formula Building Blocks
+export async function getPayrollParams(): Promise<PayrollParameter[]> {
+  return apiRequest('/payroll/structure/params');
+}
+
+// Manage Employee's Salary Structure
+export async function getEmployeeSalaryStructure(employeeId: number): Promise<EmployeeSalaryStructure[]> {
+  return apiRequest(`/payroll/structure/${employeeId}`);
+}
+
+export async function assignSalaryComponent(employeeId: number, data: any): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/payroll/structure/${employeeId}`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function removeSalaryComponent(employeeId: number, componentId: number): Promise<void> {
+  await apiRequest(`/payroll/structure/${employeeId}/components/${componentId}`, { method: 'DELETE' });
+}
+
+export interface BenefitBand {
+    id?: number;
+    band_name: string;
+    min_years_service: number;
+    max_years_service: number;
+    leave_salary_calculation: 'Basic' | 'Gross';
+    leave_salary_percentage: number;
+    lta_allowance: number;
+    lta_frequency_years: number;
+    additional_annual_leaves: number;
+    medical_plan_details: string;
+    education_allowance_per_child: number;
+    fuel_allowance_monthly: number;
+}
+
+export interface MyBenefits extends BenefitBand {
+    years_of_service: string;
+}
+
+// Manage Benefit Bands (Admin)
+export async function createBenefitBand(data: BenefitBand): Promise<{ success: boolean; message: string; bandId: number }> {
+  return apiRequest('/benefits/bands', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getBenefitBands(): Promise<BenefitBand[]> {
+  return apiRequest('/benefits/bands');
+}
+
+export async function updateBenefitBand(id: number, data: Partial<BenefitBand>): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/benefits/bands/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee Benefit Assignment
+export async function getMyBenefits(): Promise<MyBenefits> {
+  return apiRequest('/benefits/my-band');
+}
+
+export interface LeaveBalance {
+  id: number;
+  leave_type_name: string;
+  is_encashable: boolean;
+  balance: string;
+}
+
+export interface LeaveEncashmentRequest {
+    id: number;
+    employee_id: number;
+    request_date: string;
+    days_to_encash: string;
+    calculated_amount: string;
+    status: 'Pending' | 'Approved' | 'Rejected' | 'Processed'; // Added 'Processed'
+    employee_name: string;
+    jv_number?: string;
+    rejection_reason?: string;
+}
+
+
+
+export async function submitLeaveEncashment(data: { leave_type_id: number; days_to_encash: number }): Promise<{ success: boolean; message: string; encashmentId: number }> {
+  return apiRequest('/leaves/encashment/request', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Admin gets ALL requests (can be filtered on the frontend)
+export async function getLeaveEncashmentRequests(params?: { employee_id?: number; status?: string }): Promise<LeaveEncashmentRequest[]> {
+  const query = new URLSearchParams();
+  if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+  if (params?.status) query.append('status', params.status);
+  const queryString = query.toString();
+  return apiRequest(`/leaves/encashment/all${queryString ? `?${queryString}` : ''}`);
+}
+
+
+// Manager approves or rejects a 'Pending' request
+export async function approveLeaveEncashment(id: number, data: { status: 'Approved' | 'Rejected'; rejection_reason?: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/leaves/encashment/approval/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Finance/HR disburses an 'Approved' request
+export async function disburseLeaveEncashment(id: number, data: { jv_number: string }): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/leaves/encashment/disburse/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export interface EosSettlement {
+    id: number;
+    employee_id: number;
+    last_working_date: string;
+    termination_type: 'Resignation' | 'Termination' | 'End of Contract' | 'Retirement';
+    net_settlement_amount: string;
+    status: 'Pending' | 'Approved' | 'Paid';
+    employee_name: string;
+}
+
+// V2 Detailed Interface with Breakdowns
+export interface EosSettlementDetails {
+    id: number;
+    employee_id: number;
+    last_working_date: string;
+    termination_type: 'Resignation' | 'Termination' | 'End of Contract' | 'Retirement';
+    termination_reason: string | null;
+    notes: string | null;
+    leave_encashment_amount: string;
+    leave_encashment_breakdown: {
+        basic_salary: number;
+        daily_rate: string;
+        total_leave_balance: number;
+        unpaid_days_deducted: number;
+        net_encashable_days: number;
+        calculation: string;
+    };
+    gratuity_amount: string;
+    gratuity_breakdown: {
+        service_years: string;
+        basic_salary: number;
+        breakdown: {
+            years: number | string;
+            rate_in_days: number;
+            days_payable: number | string;
+        }[];
+        total_days_payable: string;
+        calculation: string;
+    };
+    loan_deduction_amount: string;
+    loan_deduction_breakdown: {
+        loan_id: string;
+        outstanding_principal: string;
+    }[];
+    case_deduction_amount : string;
+    case_deduction_breakdown:{
+      case_id:string;
+      title:string;
+      amount:string
+    }[]
+    other_deductions: string;
+    total_additions: string;
+    total_deductions: string;
+    net_settlement_amount: string;
+    status: 'Pending' | 'Approved' | 'Paid';
+    jv_number: string | null;
+    employee_name: string;
+}
+
+
+// 1. Initiate a New Settlement
+export async function initiateSettlement(data: {
+    employee_id: number;
+    termination_type: string;
+    last_working_date: string;
+    termination_reason?: string;
+    notes?: string;
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest('/eos/initiate', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// 2. Get All Settlements
+export async function getAllSettlements(): Promise<EosSettlement[]> {
+    return apiRequest('/eos/');
+}
+
+// 3. Get Single Settlement Details
+export async function getSettlementDetails(settlementId: number): Promise<EosSettlementDetails> {
+    return apiRequest(`/eos/${settlementId}`);
+}
+
+// 4. Update Deductions (Simplified for V2)
+export async function updateEosDeductions(settlementId: number, data: {
+    other_deductions?: number;
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/deductions`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// 5. Approve a Settlement
+export async function approveSettlement(settlementId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/approve`, { method: 'PATCH' });
+}
+
+// 6. Record a Payment
+export async function recordEosPayment(settlementId: number, data: { jv_number: string }): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/eos/${settlementId}/payment`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export interface CaseCategory {
+    id: number;
+    name: string;
+}
+
+export interface CaseFile {
+    id: number;
+    case_id: number;
+    file_url: string;
+    uploaded_at: string;
+}
+
+export interface Case {
+    id: number;
+    case_id_text: string;
+    employee_id: number;
+    employee_name: string;
+    category_id: number;
+    category_name: string;
+    title: string;
+    description: string;
+    status: 'Open' | 'Under Review' | 'Approved' | 'Rejected' | 'Closed';
+    deduction_amount: string | null;
+    is_deduction_synced: boolean;
+    raised_by_id: number;
+    raised_by_name: string;
+    assigned_to_id: number | null;
+    rejection_reason: string | null;
+    created_at: string;
+    attachments?: CaseFile[];
+}
+
+// Case Categories
+export async function getCaseCategories(): Promise<CaseCategory[]> {
+    return apiRequest('/cases/categories');
+}
+
+export async function createCaseCategory(data: { name: string }): Promise<any> {
+    return apiRequest('/cases/categories', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Cases
+export async function createCase(formData: FormData): Promise<any> {
+    // This requires a direct fetch call to handle multipart/form-data
+    const token = localStorage.getItem("hr_token");
+    const response = await fetch(`${API_CONFIG.BASE_URL}/cases`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create case');
+    }
+    return response.json();
+}
+
+export async function getAllCases(params?: { status?: string, employee_id?: number }): Promise<Case[]> {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.employee_id) query.append('employee_id', String(params.employee_id));
+    const queryString = query.toString();
+    return apiRequest(`/cases${queryString ? `?${queryString}` : ''}`);
+}
+
+export async function getCaseDetails(caseId: number): Promise<Case> {
+    // Assuming a GET /api/cases/:id endpoint exists as per standard practice
+    return apiRequest(`/cases/${caseId}`);
+}
+
+export async function getManagerCaseApprovals(): Promise<Case[]> {
+    return apiRequest('/cases/approvals');
+}
+
+export async function processCaseApproval(caseId: number, data: { status: 'Approved' | 'Rejected', rejection_reason?: string }): Promise<any> {
+    return apiRequest(`/cases/approvals/${caseId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function syncCaseToPayroll(caseId: number): Promise<any> {
+    return apiRequest(`/cases/${caseId}/sync-payroll`, { method: 'POST' });
+}
+
+export interface JobOpening {
+    id: number;
+    job_title: string;
+    status: 'Open' | 'Closed';
+    number_of_positions: number;
+    applicant_count: number;
+}
+
+export interface Applicant {
+    id: number;
+    opening_id: number;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    notes: string | null;
+    resume_url: string | null;
+    status: 'Applied' | 'Interviewing' | 'Approved' | 'Rejected' | 'Hired';
+}
+
+// Job Openings
+export async function createJobOpening(data: { job_id: number; number_of_positions: number; required_skill_ids: number[] }): Promise<any> {
+    return apiRequest('/onboarding/openings', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getJobOpenings(): Promise<JobOpening[]> {
+    return apiRequest('/onboarding/openings');
+}
+
+// Applicants
+export async function addApplicant(openingId: number, formData: FormData): Promise<any> {
+    const token = localStorage.getItem("hr_token");
+    const response = await fetch(`${API_CONFIG.BASE_URL}/onboarding/openings/${openingId}/applicants`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+    });
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add applicant');
+    }
+    return response.json();
+}
+
+export async function getApplicantsForOpening(openingId: number): Promise<Applicant[]> {
+    return apiRequest(`/onboarding/openings/${openingId}/applicants`);
+}
+
+export async function updateApplicantStatus(applicantId: number, data: { status: string; notes?: string }): Promise<any> {
+    return apiRequest(`/onboarding/applicants/${applicantId}/status`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export async function convertApplicantToEmployee(applicantId: number, data: { new_employee_id: string; joining_date: string; system_role: number; shift: number }): Promise<{ success: boolean; message: string; user_id: number; temporary_password?: string }> {
+    return apiRequest(`/onboarding/applicants/${applicantId}/convert`, { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function updateJobOpeningStatus(openingId: number, status: 'Open' | 'Closed' | 'OnHold'): Promise<any> {
+    return apiRequest(`/onboarding/openings/${openingId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+
+export interface ReviewCycle {
+    id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    status: 'Upcoming' | 'Active' | 'Closed';
+}
+
+export interface Kpi {
+    id: number;
+    kpi_name: string;
+    description: string;
+    category: 'Qualitative' | 'Quantitative';
+}
+
+export interface TeamAppraisalStatus {
+    employee_id: number;
+    employee_name: string;
+    appraisal_id: number | null;
+    status: 'Not Started' | 'Pending' | 'Self-Assessment' | 'Manager-Review' | 'Completed';
+}
+
+export interface AppraisalGoal {
+    id: number;
+    appraisal_id: number;
+    goal_title: string;
+    goal_description: string;
+    weightage: number;
+    employee_comments: string | null;
+    employee_rating: number | null;
+    manager_comments: string | null;
+    manager_rating: number | null;
+}
+
+export interface AppraisalKpi {
+    id: number;
+    appraisal_id: number;
+    kpi_id: number;
+    kpi_name: string;
+    target: string;
+    actual: string | null;
+    weightage: number;
+    employee_comments: string | null;
+    employee_rating: number | null;
+    manager_comments: string | null;
+    manager_rating: number | null;
+}
+
+export interface AppraisalDetails {
+    id: number;
+    cycle_id: number;
+    employee_id: number;
+    employee_name: string;
+    manager_id: number;
+    status: 'Pending' | 'Self-Assessment' | 'Manager-Review' | 'Completed';
+    final_manager_comments: string | null;
+    overall_manager_rating: number | null;
+    goals: AppraisalGoal[];
+    kpis: AppraisalKpi[];
+}
+
+// Admin APIs
+export async function createReviewCycle(data: { cycle_name: string; start_date: string; end_date: string }): Promise<any> {
+    return apiRequest('/performance/cycles', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getReviewCycles(): Promise<ReviewCycle[]> {
+    return apiRequest('/performance/cycles');
+}
+
+export async function createKpi(data: { kpi_name: string; description: string; category: 'Qualitative' | 'Quantitative' }): Promise<any> {
+    return apiRequest('/performance/kpis', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getAllKpis(): Promise<Kpi[]> {
+    return apiRequest('/performance/kpis');
+}
+
+// Manager APIs
+
+
+export async function initiateTeamAppraisals(cycle_id: number): Promise<any> {
+    return apiRequest('/performance/appraisals/initiate-team', { method: 'POST', body: JSON.stringify({ cycle_id }) });
+}
+
+export async function assignGoal(data: { appraisal_id: number; goal_title: string; goal_description: string; weightage: number }): Promise<any> {
+    return apiRequest('/performance/goals', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function assignKpi(data: { appraisal_id: number; kpi_id: number; target: string; weightage: number }): Promise<any> {
+    return apiRequest('/performance/kpis/assign', { method: 'POST', body: JSON.stringify(data) });
+}
+
+export async function getTeamAppraisalStatuses(cycleId: number): Promise<TeamAppraisalStatus[]> {
+    return apiRequest(`/performance/appraisals/team/${cycleId}`);
+}
+
+// Assumes an endpoint to get a single appraisal's details
+export async function getAppraisalDetails(appraisalId: number): Promise<AppraisalDetails> {
+    return apiRequest(`/performance/appraisals/${appraisalId}`);
+}
+
+export async function submitManagerAssessment(appraisalId: number, data: any): Promise<any> {
+    return apiRequest(`/performance/appraisals/${appraisalId}/manager-assess`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+// Employee APIs
+export async function getMyValuation(cycleId: number): Promise<AppraisalDetails> {
+    return apiRequest(`/performance/appraisals/my/${cycleId}`);
+}
+
+export async function submitSelfAssessment(appraisalId: number, data: any): Promise<any> {
+    return apiRequest(`/performance/appraisals/${appraisalId}/self-assess`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+
+
+// ... (existing API functions)
+
+// --- PAYROLL CYCLE & GROUPS APIS ---
+
+// export interface PayrollGroup {
+//     id: number;
+//     group_name: string;
+//     description: string;
+//     created_by: number;
+//     created_at: string;
+//     component_count: string;
+// }
+
+// export interface PayrollGroupDetails {
+//     id: number;
+//     group_name: string;
+//     description: string;
+//     components: { id: number; name: string; type: 'earning' | 'deduction' }[];
+// }
+
+
+// export interface PayrollCycle {
+//     id: number;
+//     cycle_name: string;
+//     start_date: string;
+//     end_date: string;
+//     status: 'Draft' | 'Auditing' | 'Review' | 'Finalized' | 'Paid';
+//     initiated_by_name: string;
+//     runs: {
+//         id: number;
+//         cycle_id: number;
+//         group_id: number;
+//         status: 'Pending' | 'Calculated';
+//         group_name: string;
+//     }[];
+//     payslips: {
+//         id: number;
+//         employee_id: number;
+//         status: 'Under Review' | 'Reviewed';
+//     }[];
+// }
+
+// export interface AuditFlag {
+//     id: number;
+//     cycle_id: number;
+//     employee_id: number;
+//     flag_type: string;
+//     description: string;
+//     status: 'Open' | 'Resolved';
+//     employee_name: string;
+// }
+
+// export interface PayslipSummary {
+//     id: number;
+//     employee_id: number;
+//     employee_name: string;
+//     gross_earnings: string;
+//     total_deductions: string;
+//     net_pay: string;
+//     status: 'Draft' | 'Finalized';
+// }
+
+// export interface PayslipDetails extends PayslipSummary {
+//     details: {
+//         id: number;
+//         component_name: string;
+//         component_type: 'earning' | 'deduction';
+//         amount: string;
+//         calculation_breakdown: any;
+//         group_name: string;
+//     }[];
+// }
+
+
+// // Section 1: Setup - Managing Payroll Groups
+// export async function getPayrollGroups(): Promise<PayrollGroup[]> {
+//     return apiRequest('/payroll/groups');
+// }
+
+// export async function getPayrollGroupDetails(groupId: number): Promise<PayrollGroupDetails> {
+//     return apiRequest(`/payroll/groups/${groupId}`);
+// }
+
+// export async function createPayrollGroup(data: { group_name: string; description: string; components: number[] }): Promise<any> {
+//     return apiRequest('/payroll/groups', { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function updatePayrollGroup(groupId: number, data: { group_name: string; description: string; components: number[] }): Promise<any> {
+//     return apiRequest(`/payroll/groups/${groupId}`, { method: 'PUT', body: JSON.stringify(data) });
+// }
+
+// export async function deletePayrollGroup(groupId: number): Promise<void> {
+//     await apiRequest(`/payroll/groups/${groupId}`, { method: 'DELETE' });
+// }
+
+
+// // Section 2: The Payroll Cycle Workflow
+// export async function getPayrollCycles(): Promise<PayrollCycle[]> {
+//     return apiRequest('/payroll/cycles');
+// }
+
+// export async function getPayrollCycleDetails(cycleId: number): Promise<PayrollCycle> {
+//     return apiRequest(`/payroll/cycles/${cycleId}`);
+// }
+
+// export async function createPayrollCycle(data: { cycle_name: string; start_date: string; end_date: string, group_ids: number[] }): Promise<{ success: boolean; message: string; cycleId: number }> {
+//     return apiRequest('/payroll/cycles', { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function runPrePayrollAudit(cycleId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/audit`, { method: 'POST' });
+// }
+// export async function verifyAudit(cycleId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/verifyAudit`, { method: 'POST' });
+// }
+
+// export async function getAuditFlags(cycleId: number): Promise<AuditFlag[]> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/audit/flags`);
+// }
+
+// export async function resolveAuditFlag(flagId: number): Promise<any> {
+//     return apiRequest(`/payroll/audit/flags/${flagId}/resolve`, { method: 'PATCH' });
+// }
+
+// export async function executePayrollGroupRun(cycleId: number, groupId: number): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/groups/${groupId}/execute`, { method: 'POST' });
+// }
+
+// export async function getPayslipsForCycle(cycleId: number): Promise<PayslipSummary[]> {
+//     return apiRequest(`/payroll/payslips/cycle/${cycleId}`);
+// }
+
+// export async function getPayslipForReview(payslipId: number): Promise<PayslipDetails> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/review`);
+// }
+
+// export async function addManualAdjustment(payslipId: number, data: { component_name: string; component_type: 'earning' | 'deduction'; amount: number; reason: string }): Promise<any> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/adjust`, { method: 'POST', body: JSON.stringify(data) });
+// }
+
+// export async function finalizePayslip(payslipId: number): Promise<any> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/finalize`, { method: 'PATCH' });
+// }
+
+// export async function updatePayslipStatus(payslipId: number, status: 'Reviewed'): Promise<{success: boolean; message: string}> {
+//     return apiRequest(`/payroll/payslips/${payslipId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// }
+
+// export async function bulkAddComponent(cycleId: number, data: { component_name: string; component_type: 'earning' | 'deduction'; amount: number; reason: string }): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/bulk-add`, { method: 'POST', body: JSON.stringify(data) });
+// }
+
+
+// // Section 3: Finalization & Employee Self-Service
+// export async function updatePayrollCycleStatus(cycleId: number, status: 'Auditing' | 'Review' | 'Finalized' | 'Paid'): Promise<any> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
+// }
+
+// export async function deletePayrollCycle(cycleId: number): Promise<void> {
+//     await apiRequest(`/payroll/cycles/${cycleId}`, { method: 'DELETE' });
+// }
+
+// export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
+//     return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
+// }
+
+export interface PayrollGroup {
+    id: number;
+    group_name: string;
+    description: string;
+    created_by: number;
+    created_by_name?: string;
+    created_at: string;
+    component_count: string;
+}
+
+export interface PayrollGroupDetails {
+    id: number;
+    group_name: string;
+    description: string;
+    components: { id: number; name: string; type: 'earning' | 'deduction' }[];
+}
+
+export interface PayrollComponentDef {
+    id: number;
+    name: string;
+    type: 'earning' | 'deduction';
+    description?: string;
+}
+
+export interface PayrollCycle {
+    id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    status: 'Draft' | 'Auditing' | 'Review' | 'Finalized' | 'Paid';
+    initiated_by: number;
+    initiated_by_name: string;
+    created_at: string;
+    runs: {
+        id: number;
+        cycle_id: number;
+        group_id: number;
+        status: 'Pending' | 'Calculated';
+        group_name: string;
+    }[];
+    payslips: {
+        id: number;
+        employee_id: number;
+        employee_name: string;
+        status: 'Draft' | 'Reviewed';
+        gross_earnings: string;
+        total_deductions: string;
+        net_pay: string;
+    }[];
+}
+
+export interface AuditFlag {
+    id: number;
+    cycle_id: number;
+    employee_id: number;
+    flag_type: string;
+    description: string;
+    status: 'Open' | 'Resolved';
+    employee_name: string;
+    joining_date?: string;
+    shift_name?: string;
+}
+
+export interface PayslipSummary {
+    id: number;
+    employee_id: number;
+    employee_name: string;
+    gross_earnings: string;
+    total_deductions: string;
+    net_pay: string;
+    status: 'Draft' | 'Reviewed' | 'Finalized';
+}
+
+export interface PayslipDetails extends PayslipSummary {
+    cycle_id: number;
+    cycle_name: string;
+    start_date: string;
+    end_date: string;
+    details: {
+        id: number;
+        component_id: number | null;
+        component_name: string;
+        component_type: 'earning' | 'deduction';
+        amount: string;
+        calculation_breakdown: any;
+        group_name: string;
+    }[];
+}
+
+// Section 1: Setup - Managing Payroll Groups
+export async function getPayrollGroups(): Promise<PayrollGroup[]> {
+    return apiRequest('/payroll/groups');
+}
+
+export async function getPayrollGroupDetails(groupId: number): Promise<PayrollGroupDetails> {
+    return apiRequest(`/payroll/groups/${groupId}`);
+}
+
+export async function createPayrollGroup(data: { 
+    group_name: string; 
+    description: string; 
+    components: number[] 
+}): Promise<{ success: boolean; message: string; groupId: number }> {
+    return apiRequest('/payroll/groups', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function updatePayrollGroup(groupId: number, data: { 
+    group_name: string; 
+    description: string; 
+    components: number[] 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/groups/${groupId}`, { 
+        method: 'PUT', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function deletePayrollGroup(groupId: number): Promise<void> {
+    await apiRequest(`/payroll/groups/${groupId}`, { method: 'DELETE' });
+}
+
+export async function getPayrollComponentDefs(): Promise<PayrollComponentDef[]> {
+    return apiRequest('/payroll/components');
+}
+
+// Section 2: The Payroll Cycle Workflow
+export async function getPayrollCycles(): Promise<PayrollCycle[]> {
+    return apiRequest('/payroll/cycles');
+}
+
+export async function getPayrollCycleDetails(cycleId: number): Promise<PayrollCycle> {
+    return apiRequest(`/payroll/cycles/${cycleId}`);
+}
+
+export async function createPayrollCycle(data: { 
+    cycle_name: string; 
+    start_date: string; 
+    end_date: string;
+    group_ids: number[] 
+}): Promise<{ success: boolean; message: string; cycleId: number }> {
+    return apiRequest('/payroll/cycles', { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function runPrePayrollAudit(cycleId: number): Promise<{
+    success: boolean;
+    message: string;
+    audit_summary: {
+        total_issues_found: number;
+        missing_attendance: number;
+        unapproved_overtime: number;
+        missing_salary_structure: number;
+        incomplete_structures: number;
+        invalid_formulas: number;
+    };
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/audit`, { method: 'POST' });
+}
+
+export async function verifyAudit(cycleId: number): Promise<{
+    cycle_id: number;
+    is_clear: boolean;
+    open_flags_count: number;
+    new_flags_found: number;
+    message: string;
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/verifyAudit`, { method: 'POST' });
+}
+
+export async function getAuditFlags(cycleId: number): Promise<AuditFlag[]> {
+    return apiRequest(`/payroll/cycles/${cycleId}/audit/flags`);
+}
+
+export async function resolveAuditFlag(flagId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/audit/flags/${flagId}/resolve`, { method: 'PATCH' });
+}
+
+export async function executePayrollGroupRun(cycleId: number, groupId: number): Promise<{
+    success: boolean;
+    message: string;
+    summary?: {
+        total_employees: number;
+        processed: number;
+        errors: number;
+        components_processed: number;
+    };
+}> {
+    return apiRequest(`/payroll/cycles/${cycleId}/groups/${groupId}/execute`, { method: 'POST' });
+}
+
+export async function getPayslipsForCycle(cycleId: number): Promise<PayslipSummary[]> {
+    return apiRequest(`/payroll/payslips/cycle/${cycleId}`);
+}
+
+export async function getPayslipForReview(payslipId: number): Promise<PayslipDetails> {
+    return apiRequest(`/payroll/payslips/${payslipId}/review`);
+}
+
+export async function addManualAdjustment(payslipId: number, data: { 
+    component_name: string; 
+    component_type: 'earning' | 'deduction'; 
+    amount: number; 
+    reason: string 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/payslips/${payslipId}/adjust`, { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+export async function finalizePayslip(payslipId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/payslips/${payslipId}/finalize`, { method: 'PATCH' });
+}
+
+export async function updatePayslipStatus(payslipId: number, status: 'Reviewed'): Promise<{
+    success: boolean; 
+    message: string
+}> {
+    return apiRequest(`/payroll/payslips/${payslipId}/status`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ status }) 
+    });
+}
+
+export async function bulkAddComponent(cycleId: number, data: { 
+    component_name: string; 
+    component_type: 'earning' | 'deduction'; 
+    amount: number; 
+    reason: string 
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/cycles/${cycleId}/bulk-add`, { 
+        method: 'POST', 
+        body: JSON.stringify(data) 
+    });
+}
+
+// Section 3: Finalization & Employee Self-Service
+export async function updatePayrollCycleStatus(cycleId: number, status: 
+    'Auditing' | 'Review' | 'Finalized' | 'Paid'
+): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/cycles/${cycleId}/status`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ status }) 
+    });
+}
+
+export async function deletePayrollCycle(cycleId: number): Promise<void> {
+    await apiRequest(`/payroll/cycles/${cycleId}`, { method: 'DELETE' });
+}
+
+export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
+    return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
+}
+
+
+
+export interface ShiftRotation {
+    id: number;
+    rotation_name: string;
+    effective_from: string;
+    status: 'Draft' | 'Pending Approval' | 'Approved' | 'Executed';
+    created_by_name: string;
+    employee_count: number;
+}
+
+export interface ShiftRotationDetailItem {
+    employee_id: number;
+    employee_name: string;
+    from_shift_id: number;
+    from_shift_name: string;
+    to_shift_id: number;
+    to_shift_name: string;
+}
+
+export interface ShiftRotationAudit {
+    id: number;
+    timestamp: string;
+    action: string;
+    details: string;
+    user_name: string;
+}
+
+export interface ShiftRotationDetails extends ShiftRotation {
+    details: ShiftRotationDetailItem[];
+    audit_log: ShiftRotationAudit[];
+}
+
+// Create a new Shift Rotation
+export async function createShiftRotation(data: {
+    rotation_name: string;
+    effective_from: string;
+    rotations: { employee_id: number; from_shift_id: number; to_shift_id: number }[];
+}): Promise<{ success: boolean; message: string; rotation_id: number }> {
+    return apiRequest('/shift-rotations', { method: 'POST', body: JSON.stringify(data) });
+}
+
+// Get all Shift Rotations
+export async function getAllShiftRotations(): Promise<ShiftRotation[]> {
+    return apiRequest('/shift-rotations');
+}
+
+// Get a single Shift Rotation's details
+export async function getShiftRotationDetails(rotationId: number): Promise<ShiftRotationDetails> {
+    return apiRequest(`/shift-rotations/${rotationId}`);
+}
+
+// Update a Shift Rotation (Drafts only)
+export async function updateShiftRotation(rotationId: number, data: {
+    rotation_name: string;
+    effective_from: string;
+    rotations: { employee_id: number; from_shift_id: number; to_shift_id: number }[];
+}): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}`, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+// Submit for Approval
+export async function submitShiftRotationForApproval(rotationId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}/submit`, { method: 'PATCH' });
+}
+
+// Approve or Reject a Rotation
+export async function processShiftRotationApproval(rotationId: number, status: 'Approved' | 'Draft'): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/shift-rotations/${rotationId}/approve`, { method: 'PATCH', body: JSON.stringify({ status }) });
+}
+
+// Delete a Shift Rotation (Drafts only)
+export async function deleteShiftRotation(rotationId: number): Promise<void> {
+    await apiRequest(`/shift-rotations/${rotationId}`, { method: 'DELETE' });
+}
+
+
+
+export interface ReportResponse {
+  success: boolean;
+  message: string;
+  downloadUrl: string;
+  summary: any;
+}
+
+export const reportsApi = {
+  attendanceDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  attendanceMonthly: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/monthly", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  attendanceEmployee: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/attendance/employee-summary", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollCycle: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/cycle", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollSalary: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/salary-structure", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  payrollCostCenter: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/payroll/cost-center", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveBalances: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/balances", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  leaveEncashment: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/leave/encashment", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  employeeDirectory: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/employee/directory", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  employeeDemographics: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/employee/demographics", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  performanceAppraisals: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/performance/appraisals", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  performanceGoals: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/performance/goals", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  hrCaseDetailed: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/cases/detailed", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  hrCaseSummary: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/cases/summary", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  loanApplications: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/loans/applications", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  loanRepayments: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/loans/repayments", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  expenseClaims: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/expenses/claims", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  auditUser: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/audit/user-changes", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+
+  auditAttendance: (filters: any) => 
+    apiRequest<ReportResponse>("/reports/audit/attendance-changes", {
+      method: "POST",
+      body: JSON.stringify(filters)
+    }),
+};
+
+export function downloadFile(url: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "";
+  a.click();
 }
