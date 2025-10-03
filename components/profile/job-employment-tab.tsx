@@ -597,9 +597,9 @@ export function JobEmploymentTab({ profile, isEditing, isSelfProfile = false, on
                 {isEditing ? (
                      <Popover open={isManagerPopoverOpen} onOpenChange={setIsManagerPopoverOpen}>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
+                            <button  className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
                                 {managers.find(m => m.id === formData.reports_to)?.first_name || "Select Manager"}
-                            </Button>
+                            </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[300px] p-0">
                             <Command>
