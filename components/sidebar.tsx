@@ -479,6 +479,7 @@ import {
   CalendarDays,
   User2,
   Users2Icon,
+  WalletIcon,
 } from "lucide-react"
 
 interface NavItem {
@@ -513,6 +514,7 @@ const adminNavigations: NavItem[] = [
     title: "Finance & Payroll",
     icon: Banknote,
     children: [
+      { title: "Finances", href: "/admin/finance", icon: WalletIcon, permission: "loans.manage" },
       { title: "Loan Management", href: "/management/loans", icon: DollarSign, permission: "loans.manage" },
       { title: "Expense Claims", href: "/management/expenses", icon: Receipt, permission: "expenses.manage" },
       { title: "Leave Encashment", href: "/management/leave-encashment", icon: Wallet, permission: "leaves.manage" },

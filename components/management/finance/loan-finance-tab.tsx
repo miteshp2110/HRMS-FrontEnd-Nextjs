@@ -59,7 +59,10 @@ export default function LoanFinanceTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {approvedLoans.map((loan) => (
+              {approvedLoans.length === 0?
+              <TableCell colSpan={4} className="text-center h-24">No Records Found</TableCell>
+            :
+            approvedLoans.map((loan) => (
                 <TableRow key={loan.id}>
                   <TableCell>{loan.application_id_text}</TableCell>
                   <TableCell>{loan.employee_name}</TableCell>

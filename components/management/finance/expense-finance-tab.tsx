@@ -143,7 +143,10 @@ export default function ExpenseFinanceTab() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {approvedClaims.map(claim => (
+                                        {approvedClaims.length === 0 ?
+                                        <TableCell colSpan={6} className="text-center h-24">No Records Found</TableCell>
+                                    :
+                                    approvedClaims.map(claim => (
                                             <TableRow key={claim.id} onClick={() => handleReimburseClick(claim)} className="cursor-pointer">
                                                 <TableCell>{claim.employee_name}</TableCell>
                                                 <TableCell><Badge variant={claim.claim_type === 'Advance' ? 'secondary' : 'default'}>{claim.claim_type}</Badge></TableCell>
@@ -182,7 +185,10 @@ export default function ExpenseFinanceTab() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {upcomingPayrollClaims.map(claim => (
+                                        {upcomingPayrollClaims.length === 0?
+                                        <TableCell colSpan={6} className="text-center h-24">No Records Found</TableCell>
+                                    :
+                                    upcomingPayrollClaims.map(claim => (
                                             <TableRow key={claim.id}>
                                                 <TableCell>{claim.employee_name}</TableCell>
                                                 <TableCell>{claim.title}</TableCell>
@@ -229,7 +235,10 @@ export default function ExpenseFinanceTab() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {processedClaims.map(claim => (
+                                        {processedClaims.length === 0?
+                                        <TableCell colSpan={6} className="text-center h-24">No Records Found</TableCell>
+                                    :
+                                    processedClaims.map(claim => (
                                             <TableRow key={claim.id}>
                                                 <TableCell>{claim.employee_name}</TableCell>
                                                 <TableCell>{claim.title}</TableCell>
