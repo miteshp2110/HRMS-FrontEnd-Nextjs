@@ -51,12 +51,12 @@ export default function ManagerCaseApprovalPage() {
     }
 
     return (
-        <MainLayout>
+        <>
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
                     <FolderKanban className="h-8 w-8"/>
                     <div>
-                        <h1 className="text-3xl font-bold">HR Case Approvals</h1>
+                        <h1 className="text-3xl font-bold">Employee Case Management</h1>
                         <p className="text-muted-foreground">Review cases for your direct reports that require your approval.</p>
                     </div>
                 </div>
@@ -105,6 +105,6 @@ export default function ManagerCaseApprovalPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </MainLayout>
+        </>
     );
 }

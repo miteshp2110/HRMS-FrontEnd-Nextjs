@@ -51,11 +51,16 @@ export default function TeamPerformancePage() {
     getReviewCycles().then(setCycles);
   }, []);
 
+  React.useEffect(()=>{
+    handleCycleChange(selectedCycleId)
+  },[selectedCycleId])
+
   const handleCycleChange = async (cycleId: string) => {
     setSelectedCycleId(cycleId);
     setIsLoading(true);
     try {
       const data = await getTeamAppraisalStatuses(Number(cycleId));
+      
       setTeamStatuses(data);
     } catch (error: any) {
       toast({
@@ -94,7 +99,7 @@ export default function TeamPerformancePage() {
     teamStatuses.every((s) => s.status === "Not Started");
 
   return (
-    <MainLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <BarChart className="h-8 w-8" />
@@ -122,8 +127,8 @@ export default function TeamPerformancePage() {
                 </SelectContent>
               </Select>
 
-              {teamStatuses.length > 0 &&
-                teamStatuses[0].status === "Not Started" && (
+              {(selectedCycleId &&
+                teamStatuses[0].status === null) && (
                   <Button onClick={handleInitiate} disabled={isInitiating}>
                     {isInitiating
                       ? "Initiating..."
@@ -187,6 +192,6 @@ export default function TeamPerformancePage() {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </>
   );
 }
