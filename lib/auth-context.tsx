@@ -74,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null)
     localStorage.removeItem("hr_token")
     localStorage.removeItem("hr_user")
+    window.location.href='/login'
   }
 
   const hasPermission = (permission: string): boolean => {

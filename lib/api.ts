@@ -3400,3 +3400,87 @@ export function downloadFile(url: string) {
   a.download = "";
   a.click();
 }
+
+
+
+
+
+export interface UserDashboardData {
+    user: {
+        first_name: string;
+        last_name: string;
+        full_employee_id: string;
+        reports_to_name: string;
+    };
+    documentStatus: {
+        expiring: {
+            name: string;
+            expiry_date: string;
+        }[];
+        notUploaded: {
+            name: string;
+        }[];
+    };
+    upcomingHoliday: {
+        name: string;
+        holiday_date: string;
+    } | null;
+    monthlyAttendance: {
+        total_days: number;
+        present_days: number;
+        absent_days: number;
+        leave_days: number;
+        total_hours_worked: string;
+        approved_overtime: string;
+        rejected_overtime: string;
+    };
+    upcomingLeave: {
+        from_date: string;
+        to_date: string;
+        leave_description: string;
+    } | null;
+    pendingApprovals: {
+        leaves: {
+            id: number;
+            fromDate:string;
+            toDate:string;
+            leave_type_name: string;
+        }[];
+    };
+    myPendingRequests: {
+        loans: {
+            id: number;
+            requested_amount: string;
+            name:string;
+        }[];
+        expenses: {
+            id: number;
+            title: string;
+            amount: string;
+        }[];
+        overtime: {
+            id: number;
+            overtime_hours: string;
+            request_date: string;
+        }[];
+    };
+    ongoingLoans: {
+        id: number;
+        application_id_text: string;
+        approved_amount: string;
+        emi_amount: string;
+        tenure_months: number;
+        loan_type_name: string;
+        emis_paid: number;
+        total_emis: number;
+    }[];
+    pendingCases: {
+        id: number;
+        case_id_text: string;
+        title: string;
+    }[];
+}
+
+export async function getUserDashboardData(): Promise<UserDashboardData> {
+    return apiRequest('/dashboard/user');
+}
