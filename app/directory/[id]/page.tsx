@@ -49,6 +49,7 @@ import {
   OngoingLoan,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export default function EmployeeProfilePage() {
   const params = useParams()
@@ -164,6 +165,33 @@ export default function EmployeeProfilePage() {
       }
   }, [employeeId, canManageUsers, canViewPayroll, toast, router]);
 
+
+
+  const ProfileSkeleton = () => (
+    <div className="space-y-6">
+      {/* Back button skeleton */}
+      <Skeleton className="h-8 w-36" />
+
+      {/* Header skeleton */}
+      <div className="flex gap-4 items-center">
+        <Skeleton className="h-16 w-16 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+      </div>
+
+      {/* Tabs skeleton */}
+      <div className="flex gap-2 mb-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-24" />
+        ))}
+      </div>
+      {/* Main Content Skeleton */}
+      <Skeleton className="h-96 w-full" />
+    </div>
+  )
+
   useEffect(() => {
     fetchProfileData();
   }, [fetchProfileData]);
@@ -218,9 +246,7 @@ export default function EmployeeProfilePage() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
+        <ProfileSkeleton/>
       </MainLayout>
     )
   }
@@ -282,8 +308,8 @@ export default function EmployeeProfilePage() {
               />
           </TabsContent>
           <TabsContent value="bank"><BankDetailsTab bankDetails={bankDetails} isLoading={isLoading} employeeId={employeeId} onUpdate={fetchProfileData} /></TabsContent>
-          <TabsContent value="documents"><DocumentsTab documents={documents} isLoading={isLoading} /></TabsContent>
-          {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
+          <TabsContent value="documents"><DocumentsTab employeeId={employeeId} onUpload={fetchProfileData} documents={documents} isLoading={isLoading} /></TabsContent>
+          {canViewPayroll?<TabsContent value="salary"><SalaryStructureTab employeeId={employeeId} salaryStructure={salaryStructure} isLoading={isLoading} /></TabsContent>:<></>}
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
           {/* <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent> */}
           <TabsContent value="skills"><EmployeeSkillsTab skills={skills} isLoading={isLoading} /></TabsContent>

@@ -540,18 +540,38 @@ export function JobEmploymentTab({ profile, isEditing, isSelfProfile = false, on
   
   const getInitials = (firstName: string, lastName: string) => `${firstName[0]}${lastName[0]}`.toUpperCase()
 
-  const getProbationStatus = () => {
-      const joiningDate = new Date(profile.joining_date);
-      const probationEndDate = new Date(joiningDate.setMonth(joiningDate.getMonth() + 6));
-      const today = new Date();
-      if(today > probationEndDate) {
-          return "Probation Period Over";
-      }
-      const diffTime = Math.abs(probationEndDate.getTime() - today.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-      return `On Probation (${diffDays} days left)`;
+
+
+const getProbationStatus = () => {
+    const joiningDate = new Date(profile.joining_date);
+  const probationDays = profile.probation_days;
+
+  // Correctly calculate the end date by adding the probation_days to the joining date
+  const probationEndDate = new Date(joiningDate.setDate(joiningDate.getDate() + parseInt(probationDays)));
+  const today = new Date();
+  // Directly use the is_probation flag from the profile first
+  if ((today > probationEndDate) && profile.is_probation) {
+    // You might want to also have a backend process that updates the is_probation flag
+    return "Forcefull Probation Added";
+  }
+  if (!profile.is_probation) {
+    return "Probation Period Over";
   }
 
+  
+
+  // Check if the probation period has ended
+  if (today > probationEndDate) {
+    // You might want to also have a backend process that updates the is_probation flag
+    return "Probation Period Over";
+  }
+
+  // Calculate the remaining days
+  const diffTime = probationEndDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+  
+  return `On Probation (${diffDays} days left)`;
+}
 
   return (
     <div className="space-y-6">
@@ -643,7 +663,7 @@ export function JobEmploymentTab({ profile, isEditing, isSelfProfile = false, on
                              <Tooltip>
                                  <TooltipTrigger asChild>
                                      <div className="inline-block">
-                                         <Button type="button" variant="destructive" size="sm" onClick={() => setIsDeactivateDialogOpen(true)} disabled={directReports.length > 0}>Inactivate User</Button>
+                                         <Button type="button" variant="destructive" size="sm" onClick={() => setIsDeactivateDialogOpen(true)} disabled={directReports.length > 0}>Deactivate User</Button>
                                      </div>
                                  </TooltipTrigger>
                                  {directReports.length > 0 && <TooltipContent><p>This user has direct reports and cannot be deactivated.</p></TooltipContent>}

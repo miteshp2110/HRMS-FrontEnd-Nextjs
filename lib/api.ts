@@ -93,6 +93,7 @@ export interface DetailedUserProfile {
   reports_to_name?: string
   shift_name?: string
   is_probation?: boolean
+  probation_days:string;
   salary_visibility?: boolean
   inactive_date?:string
   inactive_reason?:string
@@ -197,6 +198,7 @@ export interface Shift {
   half_day_threshold: number
   punch_in_margin: number
   punch_out_margin: number
+  overtime_threshold: number
 }
 
 export interface Skill {
@@ -938,8 +940,11 @@ export async function searchUsersByPermissions(permissions: string[]): Promise<U
 }
 
 export async function getDirectReports(employeeId:number): Promise<UserProfile[]> {
-  console.log(employeeId)
+  
   return apiRequest<UserProfile[]>(`${API_CONFIG.ENDPOINTS.DIRECT_REPORTS}/${employeeId}`)
+}
+export async function getMyReports(): Promise<UserProfile[]> {
+  return apiRequest<UserProfile[]>(`${API_CONFIG.ENDPOINTS.USERS}/direct-reports`)
 }
 
 export async function updateUser(

@@ -1,3 +1,4 @@
+
 // "use client"
 
 // import * as React from "react";
@@ -11,7 +12,7 @@
 // import { Plus, Edit } from "lucide-react";
 // import { getLoanTypes, createLoanType, updateLoanType, type LoanType } from "@/lib/api";
 // import { useToast } from "@/hooks/use-toast";
-// import { Badge } from "../ui/badge";
+// import { Badge } from "@/components/ui/badge";
 
 // export function LoanTypesPage() {
 //     const { toast } = useToast();
@@ -19,7 +20,24 @@
 //     const [isLoading, setIsLoading] = React.useState(true);
 //     const [isDialogOpen, setIsDialogOpen] = React.useState(false);
 //     const [editingType, setEditingType] = React.useState<LoanType | null>(null);
-//     const [formData, setFormData] = React.useState<Partial<LoanType>>({});
+//     const [formData, setFormData] = React.useState<Partial<LoanType>>({
+//         name: '',
+//         is_advance: false,
+//         interest_rate: 0,
+//         max_tenure_months: 12,
+//         eligibility_percentage: 50
+//     });
+
+//     // Effect to handle Salary Advance logic
+//     React.useEffect(() => {
+//         if (formData.is_advance) {
+//             setFormData(prev => ({
+//                 ...prev,
+//                 interest_rate: 0,
+//                 max_tenure_months: 1,
+//             }));
+//         }
+//     }, [formData.is_advance]);
 
 //     const fetchLoanTypes = React.useCallback(async () => {
 //         setIsLoading(true);
@@ -39,7 +57,13 @@
 
 //     const handleOpenDialog = (type: LoanType | null = null) => {
 //         setEditingType(type);
-//         setFormData(type || { is_advance: false, interest_rate: 0, max_tenure_months: 12, eligibility_percentage: 50 });
+//         setFormData(type || {
+//             name: '',
+//             is_advance: false,
+//             interest_rate: 0,
+//             max_tenure_months: 12,
+//             eligibility_percentage: 50
+//         });
 //         setIsDialogOpen(true);
 //     }
 
@@ -137,15 +161,35 @@
 //                         </div>
 //                         <div className="grid gap-2">
 //                             <Label htmlFor="interest_rate">Interest Rate (%) *</Label>
-//                             <Input id="interest_rate" type="number" value={formData.interest_rate || 0} onChange={e => setFormData({...formData, interest_rate: Number(e.target.value)})} required/>
+//                             <Input 
+//                                 id="interest_rate" 
+//                                 type="number" 
+//                                 value={formData.interest_rate ?? 0} 
+//                                 onChange={e => setFormData({...formData, interest_rate: Number(e.target.value)})} 
+//                                 disabled={formData.is_advance}
+//                                 required
+//                             />
 //                         </div>
 //                         <div className="grid gap-2">
 //                             <Label htmlFor="max_tenure_months">Max Tenure (Months) *</Label>
-//                             <Input id="max_tenure_months" type="number" value={formData.max_tenure_months || 0} onChange={e => setFormData({...formData, max_tenure_months: Number(e.target.value)})}/>
+//                             <Input 
+//                                 id="max_tenure_months" 
+//                                 type="number" 
+//                                 value={formData.max_tenure_months ?? 0} 
+//                                 onChange={e => setFormData({...formData, max_tenure_months: Number(e.target.value)})}
+//                                 disabled={formData.is_advance}
+//                                 required
+//                             />
 //                         </div>
 //                         <div className="grid gap-2">
 //                             <Label htmlFor="eligibility_percentage">Eligibility (% of Base Salary) *</Label>
-//                             <Input id="eligibility_percentage" type="number" value={formData.eligibility_percentage || 0} onChange={e => setFormData({...formData, eligibility_percentage: Number(e.target.value)})}/>
+//                             <Input 
+//                                 id="eligibility_percentage" 
+//                                 type="number" 
+//                                 value={formData.eligibility_percentage ?? 0} 
+//                                 onChange={e => setFormData({...formData, eligibility_percentage: Number(e.target.value)})}
+//                                 required
+//                             />
 //                         </div>
 //                         <DialogFooter>
 //                             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
@@ -158,7 +202,8 @@
 //     )
 // }
 
-"use client"
+
+"use client";
 
 import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -168,10 +213,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, Clock } from "lucide-react";
 import { getLoanTypes, createLoanType, updateLoanType, type LoanType } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function LoanTypesPage() {
     const { toast } = useToast();
@@ -186,8 +232,8 @@ export function LoanTypesPage() {
         max_tenure_months: 12,
         eligibility_percentage: 50
     });
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-    // Effect to handle Salary Advance logic
     React.useEffect(() => {
         if (formData.is_advance) {
             setFormData(prev => ({
@@ -224,10 +270,11 @@ export function LoanTypesPage() {
             eligibility_percentage: 50
         });
         setIsDialogOpen(true);
-    }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
         try {
             if (editingType) {
                 await updateLoanType(editingType.id, formData);
@@ -240,8 +287,10 @@ export function LoanTypesPage() {
             setIsDialogOpen(false);
         } catch (error: any) {
             toast({ title: "Error", description: `Failed to save: ${error.message}`, variant: "destructive" });
+        } finally {
+            setIsSubmitting(false);
         }
-    }
+    };
 
     return (
         <Card>
@@ -271,11 +320,18 @@ export function LoanTypesPage() {
                     </TableHeader>
                     <TableBody>
                         {isLoading ? (
-                            <TableRow>
-                                <TableCell colSpan={6} className="text-center h-24">Loading...</TableCell>
-                            </TableRow>
+                            Array.from({ length: 4 }).map((_, idx) => (
+                                <TableRow key={idx}>
+                                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))
                         ) : loanTypes.length === 0 ? (
-                             <TableRow>
+                            <TableRow>
                                 <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                     No loan types created yet.
                                 </TableCell>
@@ -294,7 +350,7 @@ export function LoanTypesPage() {
                                     <TableCell>{type.eligibility_percentage}%</TableCell>
                                     <TableCell className="text-right">
                                         <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(type)}>
-                                            <Edit className="h-4 w-4"/>
+                                            <Edit className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
                                 </TableRow>
@@ -305,58 +361,63 @@ export function LoanTypesPage() {
             </CardContent>
 
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogContent>
+                <DialogContent className="max-w-md">
                     <DialogHeader>
                         <DialogTitle>{editingType ? 'Edit' : 'Create'} Loan Type</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Name *</Label>
-                            <Input id="name" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} required/>
+                            <Input id="name" value={formData.name || ''} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Switch id="is_advance" checked={formData.is_advance} onCheckedChange={c => setFormData({...formData, is_advance: c})}/>
+                            <Switch id="is_advance" checked={formData.is_advance} onCheckedChange={c => setFormData({ ...formData, is_advance: c })} />
                             <Label htmlFor="is_advance">Is Salary Advance?</Label>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="interest_rate">Interest Rate (%) *</Label>
-                            <Input 
-                                id="interest_rate" 
-                                type="number" 
-                                value={formData.interest_rate ?? 0} 
-                                onChange={e => setFormData({...formData, interest_rate: Number(e.target.value)})} 
+                            <Input
+                                id="interest_rate"
+                                type="number"
+                                value={formData.interest_rate ?? 0}
+                                onChange={e => setFormData({ ...formData, interest_rate: Number(e.target.value) })}
                                 disabled={formData.is_advance}
                                 required
                             />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="max_tenure_months">Max Tenure (Months) *</Label>
-                            <Input 
-                                id="max_tenure_months" 
-                                type="number" 
-                                value={formData.max_tenure_months ?? 0} 
-                                onChange={e => setFormData({...formData, max_tenure_months: Number(e.target.value)})}
+                            <Input
+                                id="max_tenure_months"
+                                type="number"
+                                value={formData.max_tenure_months ?? 0}
+                                onChange={e => setFormData({ ...formData, max_tenure_months: Number(e.target.value) })}
                                 disabled={formData.is_advance}
                                 required
                             />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="eligibility_percentage">Eligibility (% of Base Salary) *</Label>
-                            <Input 
-                                id="eligibility_percentage" 
-                                type="number" 
-                                value={formData.eligibility_percentage ?? 0} 
-                                onChange={e => setFormData({...formData, eligibility_percentage: Number(e.target.value)})}
+                            <Input
+                                id="eligibility_percentage"
+                                type="number"
+                                value={formData.eligibility_percentage ?? 0}
+                                onChange={e => setFormData({ ...formData, eligibility_percentage: Number(e.target.value) })}
                                 required
                             />
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
-                            <Button type="submit">Save</Button>
+                            <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting}>
+                                {isSubmitting && <Clock className="h-4 w-4 animate-spin mr-2" />}
+                                Save
+                            </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
         </Card>
-    )
+    );
 }

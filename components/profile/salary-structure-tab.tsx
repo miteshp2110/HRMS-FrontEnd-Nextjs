@@ -13,8 +13,10 @@ import { updateUser, getDetailedUserProfile } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { useParams } from "next/navigation"
 import { Button } from "../ui/button"
+import Link from "next/link"
 
 interface SalaryStructureTabProps {
+  employeeId:number
   salaryStructure: SalaryComponent[]
   isLoading: boolean
 }
@@ -26,12 +28,14 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
   const [isSaving, setIsSaving] = React.useState(false);
   const [profile, setProfile] = React.useState<DetailedUserProfile | null>(null);
   const [isLoading, setIsLoading] = React.useState(initialIsLoading);
+  const [isVisible,setVisible] = React.useState(false)
 
 
   const fetchProfile = React.useCallback(async () => {
     setIsLoading(true);
     try {
         const profileData = await getDetailedUserProfile(employeeId);
+        setVisible(profile?.salary_visibility!)
         setProfile(profileData);
     } catch (error) {
         console.error("Failed to fetch profile for salary tab", error);
@@ -58,7 +62,7 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
         description: `Salary visibility for ${profile.first_name} has been ${checked ? 'enabled' : 'disabled'}.`
       });
       // No need to call parent, just refetching its own data
-      fetchProfile();
+      // fetchProfile();
     } catch (error: any) {
       toast({
         title: "Update Failed",
@@ -85,7 +89,7 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Salary Structure</CardTitle>
-                <Button>Salary Management</Button>
+                <Link href={``}><Button>Salary Management</Button></Link>
             </CardHeader>
             <CardContent className="text-center py-12 text-muted-foreground">
                 <DollarSign className="h-10 w-10 mx-auto mb-4" />
@@ -133,7 +137,7 @@ export function SalaryStructureTab({ salaryStructure, isLoading: initialIsLoadin
         <CardHeader>
             <div className="flex justify-between items-center">
                 <CardTitle>Settings</CardTitle>
-                <Button>Salary Management</Button>
+                <Link href={`/payroll/structure/${employeeId}`}><Button>Salary Management</Button></Link>
             </div>
         </CardHeader>
         <CardContent>
