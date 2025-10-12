@@ -22,7 +22,9 @@ import {
     bulkAddComponent,
     updatePayrollCycleStatus,
     type PayslipSummary, 
-    type PayslipDetails 
+    type PayslipDetails, 
+    deletePayrollComponent,
+    deleteComponentFromPayslip
 } from "@/lib/api";
 import { 
     Eye, 
@@ -42,7 +44,8 @@ import {
     Hash,
     Landmark,
     Receipt,
-    Gavel
+    Gavel,
+    Trash2
 } from "lucide-react";
 import { ManualAdjustmentDialog } from "./ManualAdjustmentDialog";
 // import { CalculationBreakdownDialog } from "./CalculationBreakdownDialog"; // We will create this component below
@@ -420,7 +423,7 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange }: Props) {
                                                             ) : (
                                                                 <>
                                                                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                                    Review
+                                                                    Mark as Reviewed
                                                                 </>
                                                             )}
                                                         </Button>
@@ -482,6 +485,7 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange }: Props) {
                                             <TableHead>Source</TableHead>
                                             {/* ADDED: Header for breakdown button */}
                                             <TableHead className="text-center">Breakdown</TableHead>
+                                            <TableHead className="text-center">Delete</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -513,6 +517,20 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange }: Props) {
                                                             <Calculator className="w-4 h-4" />
                                                         </Button>
                                                     )}
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Button
+                                                            disabled={cycleStatus==='Paid'}
+                                                            size="icon"
+                                                            variant="ghost"
+                                                            onClick={async() => {
+                                                                alert('This will delete the component')
+                                                                await deleteComponentFromPayslip(selectedPayslip.id,detail.id)
+                                                                await handleViewDetails(selectedPayslip.id)
+                                                            }}
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

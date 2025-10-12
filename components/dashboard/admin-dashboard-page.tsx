@@ -175,7 +175,7 @@ const mockAdminData: AdminDashboardData = {
 };
 
 // --- MAIN ADMIN DASHBOARD PAGE ---
-export default function AdminDashboardPage(): JSX.Element {
+export default function AdminDashboardPageX(): JSX.Element {
     const { toast } = useToast();
     const [data, setData] = useState<AdminDashboardData | null>(null);
     const [isLoading, setIsLoading] = useState(true);

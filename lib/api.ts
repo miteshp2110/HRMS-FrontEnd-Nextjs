@@ -3191,6 +3191,9 @@ export async function deletePayrollCycle(cycleId: number): Promise<void> {
 export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
     return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
 }
+export async function deleteComponentFromPayslip(payslipId: number,payslipDetailsId:number): Promise<void> {
+    return apiRequest(`/payroll/payslips/${payslipId}/details/${payslipDetailsId}`,{method:"DELETE"});
+}
 
 
 
@@ -3488,4 +3491,230 @@ export interface UserDashboardData {
 
 export async function getUserDashboardData(): Promise<UserDashboardData> {
     return apiRequest('/dashboard/user');
+}
+
+
+export async function updateAttendanceRecord(recordId:number,data: any): Promise<{ success: boolean; message: string;  }> {
+  return apiRequest(`/attendance/${recordId}`, { method: 'PATCH', body: JSON.stringify(data) });
+}
+
+export interface AttendanceAuditLog {
+  id: number;
+  fieldChanged: string;
+  oldValue: string;
+  newValue: string;
+  changedAt: string;
+  changedBy: string;
+  isBulkUpdate: boolean;
+}
+
+// Add this new method to your Api class
+  export async function  getAttendanceAudit(recordId: number): Promise<AttendanceAuditLog[]> {
+    return apiRequest(`/attendance/audit/attendance/${recordId}`);
+  }
+
+
+  export interface SalaryRevision {
+  id: number;
+  employee_id: number;
+  component_id: number;
+  effective_date: string;
+  new_calculation_type: "Fixed" | "Percentage";
+  new_value: string;
+  new_based_on_component_id?: number | null;
+  status: "Scheduled" | "Applied" | "Cancelled";
+  reason: string;
+  created_by_name: string;
+  applied_by_name?: string | null;
+  applied_at?: string | null;
+  created_at: string;
+  component_name: string;
+}
+
+export interface ScheduleRevisionPayload {
+  employee_id: number;
+  component_id: number;
+  effective_date: string;
+  new_calculation_type: "Fixed" | "Percentage";
+  new_value: number;
+  new_based_on_component_id?: number;
+  reason: string;
+}
+
+// Interfaces for Salary Audit
+export interface SalaryAuditLog {
+  id: number;
+  action_type: "UPDATE" | "INSERT" | "DELETE";
+  old_data: Record<string, any>;
+  new_data: Record<string, any>;
+  changed_at: string;
+  changed_by_name: string;
+}
+
+// Add these methods to your Api class in lib/api.ts
+
+  export async function scheduleSalaryRevision(payload: ScheduleRevisionPayload): Promise<{ success: boolean; message: string; revisionId: number }> {
+    return apiRequest("/payroll/structure/revisions/schedule", {method:"POST",body:JSON.stringify(payload)});
+  }
+
+  export async function getEmployeeRevisions(employeeId: number): Promise<SalaryRevision[]> {
+    return apiRequest(`/payroll/structure/revisions/${employeeId}`,{method:"GET"});
+  }
+
+  export async function cancelScheduledRevision(revisionId: number): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/structure/revisions/cancel/${revisionId}`,{method:"PATCH"});
+  }
+
+  export async function  getSalaryStructureAudit(employeeId: number): Promise<SalaryAuditLog[]> {
+    return apiRequest(`/payroll/structure/audit/${employeeId}`,{method:"GET"});
+  }
+
+
+  
+export interface AttendanceStats {
+  total: number;
+  present: number;
+  absent: number;
+  leave: number;
+}
+
+export interface PendingLeaveApproval {
+  id: number;
+  applied_date: string;
+  from_date: string;
+  to_date: string;
+  leave_type_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface PendingLoanApproval {
+  id: number;
+  application_id_text: string;
+  request_date: string;
+  requested_amount: string;
+  loan_type_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface PendingSkillApproval {
+  id: number;
+  request_date: string;
+  skill_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface PendingExpenseApproval {
+  id: number;
+  request_date: string;
+  title: string;
+  amount: string;
+  category_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface PendingOvertimeRequest {
+  id: number;
+  request_date: string;
+  overtime_hours: string;
+  overtime_type: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface ExpiringDocument {
+  id: number;
+  expiry_date: string;
+  document_name: string;
+  employee_name: string;
+  profile_url: string | null;
+  employee_id: number;
+}
+
+export interface OpenCase {
+  id: number;
+  case_id_text: string;
+  title: string;
+  created_at: string;
+  category_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface ExpenseDisbursementRequest {
+  id: number;
+  approval_date: string;
+  title: string;
+  amount: string;
+  claim_type: string;
+  category_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface LoanDisbursementRequest {
+  id: number;
+  application_id_text: string;
+  approval_date: string;
+  approved_amount: string;
+  loan_type_name: string;
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export interface PendingLeaveEncashment {
+  id: number;
+  request_date: string;
+  days_to_encash: string;
+  calculated_amount: string;
+  status: "Pending" | "Approved";
+  employee_name: string;
+  profile_url: string | null;
+}
+
+export async function getAttendanceStats(): Promise<AttendanceStats> {
+  return apiRequest("/dashboard/admin/attendance-stats", { method: "GET" });
+}
+
+export async function getPendingLeaveApprovals(): Promise<PendingLeaveApproval[]> {
+  return apiRequest("/dashboard/admin/pending-leave-approvals", { method: "GET" });
+}
+
+export async function getPendingLoanApprovals(): Promise<PendingLoanApproval[]> {
+  return apiRequest("/dashboard/admin/pending-loan-approvals", { method: "GET" });
+}
+
+export async function getPendingSkillApprovalsDashboard(): Promise<PendingSkillApproval[]> {
+  return apiRequest("/dashboard/admin/pending-skill-approvals", { method: "GET" });
+}
+
+export async function getPendingExpenseApprovals(): Promise<PendingExpenseApproval[]> {
+  return apiRequest("/dashboard/admin/pending-expense-approvals", { method: "GET" });
+}
+
+export async function getPendingOvertimeRequests(): Promise<PendingOvertimeRequest[]> {
+  return apiRequest("/dashboard/admin/pending-overtime-requests", { method: "GET" });
+}
+
+export async function getDocumentExpiries(days: number = 30): Promise<ExpiringDocument[]> {
+  return apiRequest(`/dashboard/admin/document-expiries?days=${days}`, { method: "GET" });
+}
+
+export async function getOpenCasesOnDirectReports(): Promise<OpenCase[]> {
+  return apiRequest("/dashboard/admin/open-cases-direct-reports", { method: "GET" });
+}
+
+export async function getExpenseDisbursementRequests(): Promise<ExpenseDisbursementRequest[]> {
+  return apiRequest("/dashboard/admin/expense-disbursement-requests", { method: "GET" });
+}
+
+export async function getLoanDisbursementRequests(): Promise<LoanDisbursementRequest[]> {
+  return apiRequest("/dashboard/admin/loan-disbursement-requests", { method: "GET" });
+}
+
+export async function getPendingLeaveEncashment(): Promise<PendingLeaveEncashment[]> {
+  return apiRequest("/dashboard/admin/pending-leave-encashment", { method: "GET" });
 }
