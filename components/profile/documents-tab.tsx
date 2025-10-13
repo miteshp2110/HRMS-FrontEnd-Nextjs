@@ -138,16 +138,160 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { FileText, Download, Calendar, AlertTriangle } from "lucide-react"
-import type { EmployeeDocument } from "@/lib/api"
+import { FileText, Download, Calendar, AlertTriangle, Upload, Command, Search, Plus } from "lucide-react"
+import { searchUsers, uploadEmployeeDocument, type EmployeeDocument, type UserProfile, type DocumentType, uploadDocument, getDocumentTypes } from "@/lib/api"
 import Link from "next/link"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../ui/dialog"
+import { Label } from "@radix-ui/react-label"
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
+import { Input } from "../ui/input"
+import { useToast } from "../ui/use-toast"
+import React from "react"
 
 interface DocumentsTabProps {
+  onUpload:()=>void;
   documents: EmployeeDocument[]
   isLoading: boolean
+  employeeId:number
+  
 }
 
-export function DocumentsTab({ documents, isLoading }: DocumentsTabProps) {
+
+interface DocumentUploadDialogProps {
+  employeeId:number
+  documentTypes: DocumentType[]
+  onUploadSuccess?: () => void
+}
+
+export function DocumentUploadDialog({ employeeId,documentTypes, onUploadSuccess }: DocumentUploadDialogProps) {
+  const [isUploadOpen, setIsUploadOpen] = React.useState(false)
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
+  const [selectedDocumentType, setSelectedDocumentType] = React.useState("")
+  const [expiryDate, setExpiryDate] = React.useState("")
+  const [isUploading, setIsUploading] = React.useState(false)
+  const { toast } = useToast()
+  
+
+  const handleUpload = async () => {
+    if (!selectedFile || !selectedDocumentType) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a document type and a file.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUploading(true)
+    const formData = new FormData()
+    formData.append("documentFile", selectedFile)
+    formData.append("document_id", selectedDocumentType)
+    if (expiryDate) {
+      formData.append("expiry_date", expiryDate)
+    }
+
+    try {
+      await uploadEmployeeDocument(employeeId,formData)
+      toast({
+        title: "Success",
+        description: "Document uploaded successfully.",
+      })
+      resetForm()
+      setIsUploadOpen(false)
+      if (onUploadSuccess) {
+        onUploadSuccess()
+      }
+    } catch (error: any) {
+      console.error("Error uploading document:", error)
+      toast({
+        title: "Upload Failed",
+        description: error.message || "Could not upload the document.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const resetForm = () => {
+    setSelectedFile(null)
+    setSelectedDocumentType("")
+    setExpiryDate("")
+  }
+
+  return (
+    <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus className="h-4 w-4 mr-2" />
+          Upload Document
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upload New Document</DialogTitle>
+          <DialogDescription>Select the document type and file to upload.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div>
+            <Label htmlFor="document-type">Document Type</Label>
+            <Select value={selectedDocumentType} onValueChange={setSelectedDocumentType}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select document type" />
+              </SelectTrigger>
+              <SelectContent>
+                {documentTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="file">File</Label>
+            <Input
+              id="file"
+              type="file"
+              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            />
+          </div>
+          <div>
+            <Label htmlFor="expiry-date">Expiry Date</Label>
+            <Input
+              id="expiry-date"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetForm()
+              setIsUploadOpen(false)
+            }}
+          >
+            Cancel
+          </Button>
+          <Button onClick={handleUpload} disabled={!selectedFile || !selectedDocumentType || isUploading}>
+            {isUploading ? "Uploading..." : "Upload"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+export function DocumentsTab({ employeeId,onUpload,documents, isLoading }: DocumentsTabProps) {
+  
+  const [documentTypes, setDocumentTypes] = React.useState<DocumentType[]>([])
+    const [isUploadOpen, setIsUploadOpen] = React.useState(false);
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -158,6 +302,13 @@ export function DocumentsTab({ documents, isLoading }: DocumentsTabProps) {
       </div>
     )
   }
+  React.useEffect(() => {
+    const fetchTypes = async () => {
+      const types = await getDocumentTypes()
+      setDocumentTypes(types)
+    }
+    fetchTypes()
+  }, [])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString()
@@ -217,7 +368,7 @@ export function DocumentsTab({ documents, isLoading }: DocumentsTabProps) {
             <CardTitle>Documents</CardTitle>
             <CardDescription>Uploaded documents and their expiry status</CardDescription>
         </div>
-        <Link href="/management/documents"><Button >Upload</Button></Link>
+        <DocumentUploadDialog employeeId={employeeId} documentTypes={documentTypes} onUploadSuccess={onUpload}/>
       </CardHeader>
       <CardContent>
         {documents.length === 0 ? (

@@ -1,3 +1,4 @@
+
 // "use client";
 
 // import * as React from "react";
@@ -194,9 +195,9 @@
 //     for (let month = 0; month < 12; month++) {
 //       const daysInMonth = new Date(year, month + 1, 0).getDate();
 //       for (let day = 1; day <= daysInMonth; day++) {
-//         const currentDate = new Date(year, month, day);
+//         const currentDate = new Date(Date.UTC(year, month, day));
 //         const dateString = currentDate.toISOString().split("T")[0];
-//         const dayOfWeekIndex = currentDate.getDay();
+//         const dayOfWeekIndex = currentDate.getUTCDay();
 //         const dayOfWeekName = Object.keys(dayNameToIndex).find(
 //           (key) => dayNameToIndex[key] === dayOfWeekIndex
 //         );
@@ -224,7 +225,7 @@
 //   }
 
 //   const holidayMap = new Map(
-//     holidays.map((h) => [new Date(h.holiday_date).toISOString().split('T')[0], h.name])
+//     holidays.map((h) => [h.holiday_date.split('T')[0], h.name])
 //   );
 //   const nonWorkingDayIndices = workWeek
 //     .filter((d) => !d.is_working_day)
@@ -338,7 +339,7 @@
 //               { month: "long" }
 //             );
 //             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-//             const firstDay = new Date(year, monthIndex, 1).getDay();
+//             const firstDay = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
 //             const monthDays = Array.from(
 //               { length: daysInMonth },
 //               (_, i) => i + 1
@@ -350,9 +351,9 @@
 //                   <CardTitle className="text-center">{monthName}</CardTitle>
 //                 </CardHeader>
 //                 <CardContent className="grid grid-cols-7 gap-1 text-center text-sm">
-//                   {["S", "M", "T", "W", "T", "F", "S"].map((d) => (
+//                   {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
 //                     <div
-//                       key={d}
+//                       key={i}
 //                       className="font-semibold text-muted-foreground h-8 w-8 flex items-center justify-center"
 //                     >
 //                       {d}
@@ -363,14 +364,13 @@
 //                   ))}
 //                   {monthDays.map((day) => {
                     
-//                     const date = new Date(year, monthIndex, day);
+//                     const date = new Date(Date.UTC(year, monthIndex, day));
 //                     const dateString = date.toISOString().split("T")[0];
                     
 //                     const isHoliday = holidayMap.has(dateString);
                     
-                    
 //                     const isWeekend = nonWorkingDayIndices.includes(
-//                       date.getDay()
+//                       date.getUTCDay()
 //                     );
 //                     const dayClasses = cn(
 //                       "flex items-center justify-center h-8 w-8 rounded-full",
@@ -438,7 +438,6 @@
 //         </Card>
 //       </TabsContent>
 
-//       {/* --- Start of Fix: Holiday List Tab --- */}
 //       <TabsContent value="list" className="space-y-6">
 //         <Card>
 //           <CardHeader>
@@ -503,12 +502,9 @@
 //           </CardContent>
 //         </Card>
 //       </TabsContent>
-//       {/* --- End of Fix --- */}
 //     </Tabs>
 //   );
 // }
-
-
 
 "use client";
 
@@ -568,6 +564,7 @@ import {
   TableBody,
   TableCell,
 } from "../ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type WorkWeek = { day_of_week: string; is_working_day: boolean }[];
 
@@ -595,7 +592,6 @@ export function CompanyCalendarPage() {
           getHolidays(currentYear),
           getWorkWeek(),
         ]);
-        
         setHolidays(holidaysData);
         setWorkWeek(
           workWeekData.sort((a, b) => {
@@ -711,10 +707,10 @@ export function CompanyCalendarPage() {
         const dayOfWeekIndex = currentDate.getUTCDay();
         const dayOfWeekName = Object.keys(dayNameToIndex).find(
           (key) => dayNameToIndex[key] === dayOfWeekIndex
-        );
+        )!;
         if (
           !holidaySet.has(dateString) &&
-          !nonWorkingWeekDays.has(dayOfWeekName!)
+          !nonWorkingWeekDays.has(dayOfWeekName)
         ) {
           workingDays++;
         }
@@ -736,7 +732,7 @@ export function CompanyCalendarPage() {
   }
 
   const holidayMap = new Map(
-    holidays.map((h) => [h.holiday_date.split('T')[0], h.name])
+    holidays.map((h) => [h.holiday_date.split("T")[0], h.name])
   );
   const nonWorkingDayIndices = workWeek
     .filter((d) => !d.is_working_day)
@@ -819,30 +815,38 @@ export function CompanyCalendarPage() {
       </div>
 
       <TabsContent value="calendar" className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Total Working Days
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalWorkingDays}</div>
-              <p className="text-xs text-muted-foreground">for {year}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">
-                Total Holidays
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalHolidays}</div>
-              <p className="text-xs text-muted-foreground">for {year}</p>
-            </CardContent>
-          </Card>
-        </div>
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-24 w-full" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Total Working Days
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalWorkingDays}</div>
+                <p className="text-xs text-muted-foreground">for {year}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm font-medium">
+                  Total Holidays
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalHolidays}</div>
+                <p className="text-xs text-muted-foreground">for {year}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {Array.from({ length: 12 }).map((_, monthIndex) => {
             const monthName = new Date(year, monthIndex).toLocaleString(
@@ -850,12 +854,12 @@ export function CompanyCalendarPage() {
               { month: "long" }
             );
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-            const firstDay = new Date(Date.UTC(year, monthIndex, 1)).getUTCDay();
-            const monthDays = Array.from(
-              { length: daysInMonth },
-              (_, i) => i + 1
-            );
+            const firstDay = new Date(
+              Date.UTC(year, monthIndex, 1)
+            ).getUTCDay();
+            const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
             const emptyDays = Array.from({ length: firstDay }, (_, i) => i);
+
             return (
               <Card key={monthIndex} className="flex flex-col">
                 <CardHeader>
@@ -871,24 +875,19 @@ export function CompanyCalendarPage() {
                     </div>
                   ))}
                   {emptyDays.map((d) => (
-                    <div key={`empty-${d}`}></div>
+                    <Skeleton key={`empty-${d}`} className="h-8 w-8" />
                   ))}
                   {monthDays.map((day) => {
-                    
                     const date = new Date(Date.UTC(year, monthIndex, day));
                     const dateString = date.toISOString().split("T")[0];
-                    
                     const isHoliday = holidayMap.has(dateString);
-                    
                     const isWeekend = nonWorkingDayIndices.includes(
                       date.getUTCDay()
                     );
                     const dayClasses = cn(
                       "flex items-center justify-center h-8 w-8 rounded-full",
                       isHoliday && "bg-purple-500 text-white",
-                      !isHoliday &&
-                        isWeekend &&
-                        "bg-muted text-muted-foreground"
+                      !isHoliday && isWeekend && "bg-muted text-muted-foreground"
                     );
                     return (
                       <TooltipProvider key={day} delayDuration={0}>
@@ -913,105 +912,127 @@ export function CompanyCalendarPage() {
       </TabsContent>
 
       <TabsContent value="settings" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Work Week Settings</CardTitle>
-            <CardDescription>
-              Define which days of the week are considered working days for the
-              whole company.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {workWeek.map((day) => (
-              <div
-                key={day.day_of_week}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <Label
-                  htmlFor={day.day_of_week}
-                  className="capitalize text-base font-medium"
+        {isLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Week Settings</CardTitle>
+              <CardDescription>
+                Define which days of the week are considered working days for
+                the whole company.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {workWeek.map((day) => (
+                <div
+                  key={day.day_of_week}
+                  className="flex items-center justify-between p-4 border rounded-lg"
                 >
-                  {day.day_of_week}
-                </Label>
-                <Switch
-                  id={day.day_of_week}
-                  checked={day.is_working_day}
-                  onCheckedChange={(checked) =>
-                    handleWorkWeekChange(day.day_of_week, checked)
-                  }
-                />
-              </div>
-            ))}
-          </CardContent>
-          <CardFooter>
-            <Button onClick={handleSaveWorkWeek}>Save Work Week</Button>
-          </CardFooter>
-        </Card>
+                  <Label
+                    htmlFor={day.day_of_week}
+                    className="capitalize text-base font-medium"
+                  >
+                    {day.day_of_week}
+                  </Label>
+                  <Switch
+                    id={day.day_of_week}
+                    checked={day.is_working_day}
+                    onCheckedChange={(checked) =>
+                      handleWorkWeekChange(day.day_of_week, checked)
+                    }
+                  />
+                </div>
+              ))}
+            </CardContent>
+            <CardFooter>
+              <Button onClick={handleSaveWorkWeek}>Save Work Week</Button>
+            </CardFooter>
+          </Card>
+        )}
       </TabsContent>
 
       <TabsContent value="list" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Holiday List</CardTitle>
-            <CardDescription>
-              A list of all holidays configured for {year}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <p>Loading holidays...</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date (DD-MM-YYYY)</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {holidays.length > 0 ? (
-                    holidays.map((holiday) => (
-                      <TableRow key={holiday.id}>
-                        <TableCell>
-                          {new Date(holiday.holiday_date)
-                            .toLocaleDateString("en-GB", {
-                              timeZone:
-                                localStorage.getItem("selectedTimezone") ||
-                                "UTC",
-                            })
-                            .replace(/\//g, "-")}
-                        </TableCell>
-
-                        <TableCell className="font-medium">
-                          {holiday.name}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteHoliday(holiday.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="text-center h-24 text-muted-foreground"
+        {isLoading ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>
+                  <Skeleton className="h-6 w-24" />
+                </TableHead>
+                <TableHead>
+                  <Skeleton className="h-6 w-32" />
+                </TableHead>
+                <TableHead className="text-right">
+                  <Skeleton className="h-6 w-16" />
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="h-4 w-8" />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date (DD-MM-YYYY)</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {holidays.length > 0 ? (
+                holidays.map((holiday) => (
+                  <TableRow key={holiday.id}>
+                    <TableCell>
+                      {new Date(holiday.holiday_date)
+                        .toLocaleDateString("en-GB", {
+                          timeZone:
+                            localStorage.getItem("selectedTimezone") ||
+                            "UTC",
+                        })
+                        .replace(/\//g, "-")}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {holiday.name}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteHoliday(holiday.id)}
                       >
-                        No holidays added for {year}.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={3}
+                    className="text-center h-24 text-muted-foreground"
+                  >
+                    No holidays added for {year}.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        )}
       </TabsContent>
     </Tabs>
   );

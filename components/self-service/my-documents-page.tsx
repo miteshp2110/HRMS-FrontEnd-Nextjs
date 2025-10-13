@@ -26,8 +26,8 @@ import Link from "next/link"
 
 export function MyDocumentsPage() {
   const [documents, setDocuments] = useState<EmployeeDocument[]>([])
-  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [documentTypes, setDocumentTypes] = useState<DocumentType[]>([])
   const [isUploadOpen, setIsUploadOpen] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedDocumentType, setSelectedDocumentType] = useState("")

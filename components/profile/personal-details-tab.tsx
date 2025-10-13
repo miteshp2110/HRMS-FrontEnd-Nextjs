@@ -114,6 +114,11 @@ export function PersonalDetailsTab({ profile, isEditing, isSelfProfile = false, 
                 <p className="text-sm capitalize">{profile.gender || "Not provided"}</p>
               )}
             </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="nationality">Nationality</Label>
+                <p  className="text-sm capitalize">{profile.nationality || "Not provided"}</p>
+            </div>
           </div>
         </CardContent>
       </Card>

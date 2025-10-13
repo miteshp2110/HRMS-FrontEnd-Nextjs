@@ -41,7 +41,7 @@ export function RoleHierarchyCanvas({ roles }: RoleHierarchyCanvasProps) {
   }
 
   return (
-    <Card className="w-[80vw]">
+    <Card className="w-[75vw]">
       <CardHeader>
         <CardTitle>Role Hierarchy</CardTitle>
         <CardDescription>Hover over a role to see its permissions.</CardDescription>
@@ -66,7 +66,7 @@ export function RoleHierarchyCanvas({ roles }: RoleHierarchyCanvasProps) {
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 border-2 border-primary/20 group-hover:bg-primary/20 transition-colors">
                     <ShieldCheck className="h-8 w-8 text-primary" />
                   </div>
-                  <h4 className="mt-2 font-semibold text-center w-32 truncate">
+                  <h4 className="mt-2 font-semibold text-center w-32 wrap-normal">
                     {role.name}
                   </h4>
                 </div>
