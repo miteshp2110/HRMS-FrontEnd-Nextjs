@@ -287,7 +287,7 @@ export default function EmployeeProfilePage() {
             {canManageLeaves?<TabsTrigger value="leaves">Leaves</TabsTrigger>:<></>}
             {/* {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>} */}
             {canManageSkills?<TabsTrigger value="skills">Skills</TabsTrigger>:<></>}
-            {canManageExpense ?<TabsTrigger value="expenses">Expenses</TabsTrigger>:<></>}
+            {canManageExpense ?<TabsTrigger  value="expenses">CTC</TabsTrigger>:<></>}
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
           </TabsList>
 

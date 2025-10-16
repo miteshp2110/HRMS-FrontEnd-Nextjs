@@ -71,6 +71,7 @@ export interface UserProfile {
   role_name: string
   job_title?: string
   full_employee_id:string
+  shift_id:number
 }
 
 export interface DetailedUserProfile {
@@ -1476,6 +1477,26 @@ export async function editLoan(
     body: JSON.stringify(data),
   })
 }
+export async function rescheduleEmi(
+  new_emi_amount:number,
+  scheduleId:number
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`${API_CONFIG.ENDPOINTS.LOANS}/repayment/reschedule/${scheduleId}`, {
+    method: "PATCH",
+    body: JSON.stringify({new_emi_amount}),
+  })
+}
+export async function makeLumpSumPayment(
+  applicationId:number,
+  paid_amount:number,
+  repayment_date:string,
+  transaction_id:string
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest<{ success: boolean; message: string }>(`${API_CONFIG.ENDPOINTS.LOANS}/repayment/lump-sum/${applicationId}`, {
+    method: "POST",
+    body: JSON.stringify({paid_amount,repayment_date,transaction_id}),
+  })
+}
 
 // Salary Structure Management APIs
 // export async function assignSalaryComponent(
@@ -2501,6 +2522,9 @@ export async function updateEosDeductions(settlementId: number, data: {
 export async function approveSettlement(settlementId: number): Promise<{ success: boolean; message: string }> {
     return apiRequest(`/eos/${settlementId}/approve`, { method: 'PATCH' });
 }
+export async function deleteSettlement(settlementId: number): Promise<{}> {
+    return apiRequest(`/eos/${settlementId}`, { method: 'DELETE' });
+}
 
 // 6. Record a Payment
 export async function recordEosPayment(settlementId: number, data: { jv_number: string }): Promise<{ success: boolean; message: string }> {
@@ -3207,6 +3231,8 @@ export interface ShiftRotation {
 }
 
 export interface ShiftRotationDetailItem {
+    id:number;
+    rotation_id:number
     employee_id: number;
     employee_name: string;
     from_shift_id: number;
@@ -3217,15 +3243,17 @@ export interface ShiftRotationDetailItem {
 
 export interface ShiftRotationAudit {
     id: number;
-    timestamp: string;
+    rotation_id:number;
+    changed_by:number;
     action: string;
     details: string;
-    user_name: string;
+    changed_at: string;
+    changed_by_name: string;
 }
 
 export interface ShiftRotationDetails extends ShiftRotation {
     details: ShiftRotationDetailItem[];
-    audit_log: ShiftRotationAudit[];
+    audit: ShiftRotationAudit[];
 }
 
 // Create a new Shift Rotation
@@ -3262,8 +3290,16 @@ export async function submitShiftRotationForApproval(rotationId: number): Promis
 }
 
 // Approve or Reject a Rotation
-export async function processShiftRotationApproval(rotationId: number, status: 'Approved' | 'Draft'): Promise<{ success: boolean; message: string }> {
-    return apiRequest(`/shift-rotations/${rotationId}/approve`, { method: 'PATCH', body: JSON.stringify({ status }) });
+export async function processShiftRotationApproval(rotationId: number, status: 'Approved' | 'Draft',reason?:string): Promise<{ success: boolean; message: string }> {
+  let body
+  if(reason){
+    body={status:status,reason:reason}
+  }
+  else{
+    body={status:status}
+    
+  }
+    return apiRequest(`/shift-rotations/${rotationId}/approve`, { method: 'PATCH', body: JSON.stringify({ body }) });
 }
 
 // Delete a Shift Rotation (Drafts only)

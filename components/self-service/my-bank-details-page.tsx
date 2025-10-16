@@ -1,3 +1,4 @@
+
 // "use client"
 
 // import type React from "react"
@@ -7,7 +8,7 @@
 // import { Input } from "@/components/ui/input"
 // import { Label } from "@/components/ui/label"
 // import { Separator } from "@/components/ui/separator"
-// import { Building, CreditCard, Hash, Save, Edit, Wallet } from "lucide-react"
+// import { Building, CreditCard, Hash, Save, Edit, Wallet, Calendar, User } from "lucide-react"
 // import { getMyBankDetails, updateMyBankDetails, type BankDetails } from "@/lib/api"
 // import { useToast } from "@/hooks/use-toast"
 
@@ -17,12 +18,20 @@
 //   const [isEditing, setIsEditing] = useState(false)
 //   const [isSubmitting, setIsSubmitting] = useState(false)
 //   const { toast } = useToast()
+//   const [timezone, setTimezone] = useState(localStorage.getItem('selectedTimezone') || 'UTC');
 
 //   const [formData, setFormData] = useState({
 //     bank_name: "",
 //     bank_account: "",
 //     bank_ifsc: "",
 //   })
+
+//   useEffect(() => {
+//     const savedTimezone = localStorage.getItem("selectedTimezone");
+//     if (savedTimezone) {
+//         setTimezone(savedTimezone);
+//     }
+//   }, []);
 
 //   const loadBankDetails = async () => {
 //     try {
@@ -80,6 +89,10 @@
 //       })
 //       setIsEditing(false);
 //     }
+//   }
+
+//   const formatTimestamp = (timestamp: string) => {
+//     return new Date(timestamp).toLocaleDateString(undefined,{timeZone:timezone})
 //   }
 
 //   if (loading) {
@@ -173,6 +186,16 @@
 //               <div className="p-3 bg-muted rounded-md"><p className="font-mono">{bankDetails.bank_ifsc}</p></div>
 //             </div>
 //           </div>
+//            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-muted-foreground space-y-2">
+//               <div className="flex gap-2">
+//                   <span className="font-semibold">Created At:</span>
+//                   <span>{formatTimestamp(bankDetails.created_at)}</span>
+//               </div>
+//               <div className="flex gap-2">
+//                   <span className="font-semibold">Last Updated:</span>
+//                   <span>{formatTimestamp(bankDetails.updated_at)} by {bankDetails.updated_by_name}</span>
+//               </div>
+//           </div>
 //         </div>
 //       ) : (
 //          <div className="text-center py-8">
@@ -185,7 +208,6 @@
 // }
 
 
-
 "use client"
 
 import type React from "react"
@@ -195,9 +217,59 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Building, CreditCard, Hash, Save, Edit, Wallet, Calendar, User } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Building, CreditCard, Hash, Save, Edit, Wallet, Calendar, User, Loader2 } from "lucide-react"
 import { getMyBankDetails, updateMyBankDetails, type BankDetails } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
+
+// Skeleton for bank details view mode
+function BankDetailsViewSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-4 w-28" />
+            <div className="p-3 bg-muted rounded-md">
+              <Skeleton className="h-5 w-full max-w-xs" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-6 pt-4 border-t space-y-2">
+        <Skeleton className="h-3 w-64" />
+        <Skeleton className="h-3 w-80" />
+      </div>
+    </div>
+  )
+}
+
+// Skeleton for card header
+function CardHeaderSkeleton() {
+  return (
+    <CardHeader>
+      <div className="flex justify-between items-center">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-80" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
+    </CardHeader>
+  )
+}
+
+// Full loading skeleton
+function BankDetailsPageSkeleton() {
+  return (
+    <Card>
+      <CardHeaderSkeleton />
+      <CardContent>
+        <BankDetailsViewSkeleton />
+      </CardContent>
+    </Card>
+  )
+}
 
 export function MyBankDetailsPage() {
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null)
@@ -205,7 +277,7 @@ export function MyBankDetailsPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
-  const [timezone, setTimezone] = useState(localStorage.getItem('selectedTimezone') || 'UTC');
+  const [timezone, setTimezone] = useState(localStorage.getItem('selectedTimezone') || 'UTC')
 
   const [formData, setFormData] = useState({
     bank_name: "",
@@ -214,15 +286,15 @@ export function MyBankDetailsPage() {
   })
 
   useEffect(() => {
-    const savedTimezone = localStorage.getItem("selectedTimezone");
+    const savedTimezone = localStorage.getItem("selectedTimezone")
     if (savedTimezone) {
-        setTimezone(savedTimezone);
+      setTimezone(savedTimezone)
     }
-  }, []);
+  }, [])
 
   const loadBankDetails = async () => {
     try {
-      setLoading(true);
+      setLoading(true)
       const data = await getMyBankDetails()
       setBankDetails(data)
       if (data) {
@@ -232,10 +304,10 @@ export function MyBankDetailsPage() {
           bank_ifsc: data.bank_ifsc,
         })
       }
-      setIsEditing(!data); // If no details exist, start in edit mode
+      setIsEditing(!data) // If no details exist, start in edit mode
     } catch (error) {
       console.error("Failed to load bank details:", error)
-      setIsEditing(true); // If there's an error (like 404), go to edit mode
+      setIsEditing(true) // If there's an error (like 404), go to edit mode
     } finally {
       setLoading(false)
     }
@@ -247,6 +319,7 @@ export function MyBankDetailsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
     setIsSubmitting(true)
     try {
       await updateMyBankDetails(formData)
@@ -274,122 +347,186 @@ export function MyBankDetailsPage() {
         bank_account: bankDetails.bank_account,
         bank_ifsc: bankDetails.bank_ifsc,
       })
-      setIsEditing(false);
+      setIsEditing(false)
     }
   }
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleDateString(undefined,{timeZone:timezone})
+    return new Date(timestamp).toLocaleDateString(undefined, { timeZone: timezone })
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    )
+    return <BankDetailsPageSkeleton />
   }
 
   return (
     <Card>
-    <CardHeader>
-      <div className="flex justify-between items-center">
-        <div>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
             <CardTitle className="flex items-center gap-2">
-                <Wallet className="h-5 w-5" />
-                Banking Information
+              <Wallet className="h-5 w-5" />
+              Banking Information
             </CardTitle>
-            <CardDescription>Your bank account for salary and reimbursement.</CardDescription>
-        </div>
-        {bankDetails && !isEditing && (
-          <Button variant="outline" onClick={() => setIsEditing(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Details
-          </Button>
-        )}
-      </div>
-    </CardHeader>
-    <CardContent>
-      {isEditing ? (
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="bank_name">Bank Name</Label>
-              <Input
-                id="bank_name"
-                value={formData.bank_name}
-                onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
-                placeholder="e.g., State Bank of India"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bank_account">Account Number</Label>
-              <Input
-                id="bank_account"
-                value={formData.bank_account}
-                onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}
-                placeholder="e.g., 1234567890123456"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="bank_ifsc">IFSC Code</Label>
-              <Input
-                id="bank_ifsc"
-                value={formData.bank_ifsc}
-                onChange={(e) => setFormData({ ...formData, bank_ifsc: e.target.value.toUpperCase() })}
-                placeholder="e.g., SBIN0001234"
-                required
-              />
-            </div>
+            <CardDescription>
+              Your bank account for salary and reimbursement.
+            </CardDescription>
           </div>
-
-          <Separator />
-
-          <div className="flex justify-end space-x-2">
-            {bankDetails && <Button type="button" variant="outline" onClick={handleCancel}>Cancel</Button>}
-            <Button type="submit" disabled={isSubmitting}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSubmitting ? "Saving..." : "Save Details"}
+          {bankDetails && !isEditing && (
+            <Button 
+              variant="outline" 
+              onClick={() => setIsEditing(true)}
+              disabled={isSubmitting}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Details
             </Button>
-          </div>
-        </form>
-      ) : bankDetails ? (
-        <div className="space-y-6">
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Bank Name</Label>
-              <div className="p-3 bg-muted rounded-md"><p className="font-medium">{bankDetails.bank_name}</p></div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Account Number</Label>
-              <div className="p-3 bg-muted rounded-md"><p className="font-mono">{bankDetails.bank_account.replace(/(.{4})/g, "$1 ").trim()}</p></div>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">IFSC Code</Label>
-              <div className="p-3 bg-muted rounded-md"><p className="font-mono">{bankDetails.bank_ifsc}</p></div>
-            </div>
-          </div>
-           <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-muted-foreground space-y-2">
-              <div className="flex gap-2">
-                  <span className="font-semibold">Created At:</span>
-                  <span>{formatTimestamp(bankDetails.created_at)}</span>
-              </div>
-              <div className="flex gap-2">
-                  <span className="font-semibold">Last Updated:</span>
-                  <span>{formatTimestamp(bankDetails.updated_at)} by {bankDetails.updated_by_name}</span>
-              </div>
-          </div>
+          )}
         </div>
-      ) : (
-         <div className="text-center py-8">
-            <p className="text-muted-foreground mb-4">No bank details found. Please add your account information.</p>
-        </div>
-      )}
-    </CardContent>
-  </Card>
+      </CardHeader>
+      <CardContent>
+        {isEditing ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bank_name">
+                  <Building className="h-4 w-4 inline mr-1" />
+                  Bank Name
+                </Label>
+                <Input
+                  id="bank_name"
+                  value={formData.bank_name}
+                  onChange={(e) => setFormData({ ...formData, bank_name: e.target.value })}
+                  placeholder="e.g., State Bank of India"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank_account">
+                  <Hash className="h-4 w-4 inline mr-1" />
+                  Account Number
+                </Label>
+                <Input
+                  id="bank_account"
+                  value={formData.bank_account}
+                  onChange={(e) => setFormData({ ...formData, bank_account: e.target.value })}
+                  placeholder="e.g., 1234567890123456"
+                  required
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bank_ifsc">
+                  <CreditCard className="h-4 w-4 inline mr-1" />
+                  IFSC Code
+                </Label>
+                <Input
+                  id="bank_ifsc"
+                  value={formData.bank_ifsc}
+                  onChange={(e) => setFormData({ ...formData, bank_ifsc: e.target.value.toUpperCase() })}
+                  placeholder="e.g., SBIN0001234"
+                  required
+                  disabled={isSubmitting}
+                  maxLength={11}
+                />
+                <p className="text-xs text-muted-foreground">
+                  IFSC code should be 11 characters (e.g., SBIN0001234)
+                </p>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-end space-x-2">
+              {bankDetails && (
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={handleCancel}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Details
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        ) : bankDetails ? (
+          <div className="space-y-6">
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <Building className="h-4 w-4" />
+                  Bank Name
+                </Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="font-medium">{bankDetails.bank_name}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <Hash className="h-4 w-4" />
+                  Account Number
+                </Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="font-mono">
+                    {bankDetails.bank_account.replace(/(.{4})/g, "$1 ").trim()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <CreditCard className="h-4 w-4" />
+                  IFSC Code
+                </Label>
+                <div className="p-3 bg-muted rounded-md">
+                  <p className="font-mono">{bankDetails.bank_ifsc}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-muted-foreground space-y-2">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3" />
+                <span className="font-semibold">Created At:</span>
+                <span>{formatTimestamp(bankDetails.created_at)}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <User className="h-3 w-3" />
+                <span className="font-semibold">Last Updated:</span>
+                <span>
+                  {formatTimestamp(bankDetails.updated_at)} by {bankDetails.updated_by_name}
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-base font-medium mb-1">No bank details found</p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Please add your account information to receive salary and reimbursements.
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
