@@ -607,7 +607,7 @@ const personalNavigations: NavItem[] = [
       { title: "Skills", href: "/self-service/skills", icon: GraduationCap },
       { title: "Performance", href: "/my-performance", icon: Star },
       { title: "Expenses", href: "/self-service/expenses", icon: Receipt },
-      { title: "Benefits", href: "/self-service/benefits", icon: Award, permission: "benefits.manage" },
+      { title: "Benefits", href: "/self-service/benefits", icon: Award },
       { title: "Leave Encashment", href: "/self-service/leave-encashment", icon: Wallet },
       { title: "Loans", href: "/self-service/loans", icon: DollarSign },
       { title: "Bank Details", href: "/self-service/bank", icon: Wallet },
