@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   CalendarIcon,
+  Clock,
   DollarSignIcon,
   FileTextIcon,
   PlaneIcon,
@@ -15,7 +16,7 @@ export function ShortcutsWidget() {
       <CardHeader>
         <CardTitle>Shortcuts</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <CardContent className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <Link href="/self-service/leaves" passHref legacyBehavior>
           <Button
             
@@ -26,6 +27,19 @@ export function ShortcutsWidget() {
             <PlaneIcon className="w-6 h-6 text-primary" />
             <span className="text-sm font-semibold text-foreground whitespace-nowrap">
               Apply for Leave
+            </span>
+          </Button>
+        </Link>
+        <Link href="/self-service/overtime" passHref legacyBehavior>
+          <Button
+            
+            variant="outline"
+            className="w-full h-20 flex flex-col items-center justify-center gap-1 hover:bg-primary/5 transition-colors border-zinc-600"
+            aria-label="Apply for Leave"
+          >
+            <Clock className="w-6 h-6 text-primary" />
+            <span className="text-sm font-semibold text-foreground whitespace-nowrap">
+              Apply for Overtime
             </span>
           </Button>
         </Link>

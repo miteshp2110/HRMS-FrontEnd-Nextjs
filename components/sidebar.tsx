@@ -540,6 +540,7 @@ import {
   CalendarDays,
   Users2Icon,
   WalletIcon,
+  Clock,
 } from "lucide-react";
 
 interface NavItem {
@@ -600,6 +601,7 @@ const personalNavigations: NavItem[] = [
     icon: User,
     children: [
       { title: "Attendance", href: "/self-service/attendance", icon: ClipboardList },
+      { title: "Overtime", href: "/self-service/overtime", icon: Clock },
       { title: "Leaves", href: "/self-service/leaves", icon: CalendarDays },
       { title: "Documents", href: "/self-service/documents", icon: FileCheck },
       { title: "Payslips", href: "/self-service/payslips", icon: Receipt, userCheck: 'salary_visibility' },
