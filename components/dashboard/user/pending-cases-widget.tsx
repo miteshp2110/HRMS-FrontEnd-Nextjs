@@ -80,6 +80,7 @@ export function PendingCasesWidget({ pendingCases }: PendingCasesWidgetProps) {
             {pendingCases.map((caseItem) => (
               <li
                 key={caseItem.id}
+                onClick={()=>{window.location.href='/self-service/cases'}}
                 className="flex items-center gap-4 px-4 py-3 hover:bg-destructive/10 cursor-pointer transition-colors"
                 title={`Case ID: ${caseItem.case_id_text}`}
               >

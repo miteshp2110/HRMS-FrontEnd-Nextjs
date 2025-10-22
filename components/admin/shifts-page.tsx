@@ -648,7 +648,7 @@ export function ShiftsPage() {
                   <TableCell className="text-center">
                     {shift.punch_in_margin.toString().split(".")[0]}m/{shift.punch_out_margin.toString().split(".")[0]}m
                   </TableCell>
-                  <TableCell className="text-center">{shift.overtime_threshold}h</TableCell>
+                  <TableCell className="text-center">{shift.overtime_threshold}m</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
                       <Button

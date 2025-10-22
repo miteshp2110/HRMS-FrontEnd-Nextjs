@@ -50,6 +50,7 @@ import {
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
+import { EmployeeCasesTab } from "@/components/cases/employee-cases-tab"
 
 export default function EmployeeProfilePage() {
   const params = useParams()
@@ -278,7 +279,7 @@ export default function EmployeeProfilePage() {
         <ProfileHeader profile={profile} isEditing={isEditing} onToggleEdit={handleToggleEdit} onViewAuditHistory={() => setIsAuditHistoryOpen(true)} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:grid-cols-10">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:grid-cols-9">
             <TabsTrigger value="personal">Personal</TabsTrigger>
             <TabsTrigger value="employment">Employment</TabsTrigger>
             <TabsTrigger value="bank">Bank</TabsTrigger>
@@ -287,7 +288,8 @@ export default function EmployeeProfilePage() {
             {canManageLeaves?<TabsTrigger value="leaves">Leaves</TabsTrigger>:<></>}
             {/* {canManageLoans?<TabsTrigger value="loans">Loans</TabsTrigger>:<></>} */}
             {canManageSkills?<TabsTrigger value="skills">Skills</TabsTrigger>:<></>}
-            {canManageExpense ?<TabsTrigger  value="expenses">CTC</TabsTrigger>:<></>}
+            {/* {canManageExpense ?<TabsTrigger  value="expenses">CTC</TabsTrigger>:<></>} */}
+            <TabsTrigger value="cases">Cases</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
           </TabsList>
 
@@ -313,8 +315,9 @@ export default function EmployeeProfilePage() {
           <TabsContent value="leaves"><LeaveHistoryTab leaveBalances={leaveBalances} leaveRecords={leaveRecords} isLoading={isLoadingLeaves} onDateChange={fetchLeaveRecordsForEmployee} /></TabsContent>
           {/* <TabsContent value="loans"><LoanHistoryTab loanHistory={loanHistory} isLoading={isLoading} /></TabsContent> */}
           <TabsContent value="skills"><EmployeeSkillsTab skills={skills} isLoading={isLoading} /></TabsContent>
-          <TabsContent value="expenses"><EmployeeExpensesTab initialExpenses={expenses} employeeId={employeeId} isLoading={isLoading} /></TabsContent>
+          {/* <TabsContent value="expenses"><EmployeeExpensesTab initialExpenses={expenses} employeeId={employeeId} isLoading={isLoading} /></TabsContent> */}
           <TabsContent value="attendance"><AttendanceHeatmap employeeId={employeeId} /></TabsContent>
+          <TabsContent value="cases"><EmployeeCasesTab employeeId={employeeId}/></TabsContent>
         </Tabs>
       </div>
       <AuditHistoryDialog auditHistory={auditHistory} open={isAuditHistoryOpen} onOpenChange={setIsAuditHistoryOpen} />
