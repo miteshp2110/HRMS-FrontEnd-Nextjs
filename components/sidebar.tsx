@@ -541,6 +541,8 @@ import {
   Users2Icon,
   WalletIcon,
   Clock,
+  FileWarning,
+  DollarSignIcon,
 } from "lucide-react";
 
 interface NavItem {
@@ -565,6 +567,7 @@ const adminNavigations: NavItem[] = [
       { title: "Skill Approvals", href: "/management/skill-approvals", icon: Award, permission: "skills.manage" },
       { title: "Documents", href: "/management/documents", icon: FileText, permission: "documents.manage" },
       { title: "Shift Rotation", href: "/management/shift-rotation", icon: RefreshCw, permission: "shift.manage" },
+      { title: "Employee's Cost", href: "/management/expense-on-employees", icon: DollarSignIcon, permission: "expenses.manage" },
       { title: "Employee Cases", href: "/admin/cases", icon: FolderKanban, permission: "cases.manage" },
       { title: "EOS Settlements", href: "/admin/eos", icon: Handshake, permission: "eos.manage" },
       { title: "Employee Reports", href: "/management/employee-reports", icon: BarChart, permission: "user.manage" },
@@ -608,6 +611,7 @@ const personalNavigations: NavItem[] = [
       { title: "Salary", href: "/self-service/salary", icon: Banknote, userCheck: 'salary_visibility' },
       { title: "Skills", href: "/self-service/skills", icon: GraduationCap },
       { title: "Performance", href: "/my-performance", icon: Star },
+      { title: "Cases", href: "/self-service/cases", icon: FileWarning },
       { title: "Expenses", href: "/self-service/expenses", icon: Receipt },
       { title: "Benefits", href: "/self-service/benefits", icon: Award },
       { title: "Leave Encashment", href: "/self-service/leave-encashment", icon: Wallet },

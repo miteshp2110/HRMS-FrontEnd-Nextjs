@@ -343,6 +343,7 @@ export interface ExpenseRecord {
   first_name : string
   last_name : string
   employee_id : number
+  jv:string
 }
 
 export interface LeaveType {
@@ -1257,6 +1258,7 @@ export async function createExpense(data: {
   expense_title: string
   expense_description: string
   expense: number
+  jv:string
 }): Promise<{ success: boolean; message: string; expense: ExpenseRecord }> {
   return apiRequest<{ success: boolean; message: string; expense: ExpenseRecord }>(API_CONFIG.ENDPOINTS.EXPENSES, {
     method: "POST",
@@ -2625,6 +2627,13 @@ export async function getCaseDetails(caseId: number): Promise<Case> {
     // Assuming a GET /api/cases/:id endpoint exists as per standard practice
     return apiRequest(`/cases/${caseId}`);
 }
+export async function getCaseByEmployee(employeeId: number): Promise<Case> {
+    return apiRequest(`/cases/employee/${employeeId}`);
+}
+export async function getMyCases(): Promise<Case> {
+    // Assuming a GET /api/cases/:id endpoint exists as per standard practice
+    return apiRequest(`/cases/my-cases`);
+}
 
 export async function getManagerCaseApprovals(): Promise<Case[]> {
     return apiRequest('/cases/approvals');
@@ -3622,3 +3631,7 @@ export async function getLoanDisbursementRequests(): Promise<LoanDisbursementReq
 export async function getPendingLeaveEncashment(): Promise<PendingLeaveEncashment[]> {
   return apiRequest("/dashboard/admin/pending-leave-encashment", { method: "GET" });
 }
+
+ export async function updateLeaveBalance(newBalance: number,employeeId:number,leaveId:number): Promise<{ success: boolean; message: string; }> {
+    return apiRequest(`/leaves/balance/${employeeId}/${leaveId}`, {method:"PATCH",body:JSON.stringify({newBalance})});
+  }

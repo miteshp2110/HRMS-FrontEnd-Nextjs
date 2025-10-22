@@ -1,29 +1,34 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { MainLayout } from "@/components/main-layout"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { 
-  FolderKanban, 
-  Plus, 
-  ArrowRight, 
-  Clock,
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  FolderKanban,
   CheckCircle,
   XCircle,
+  Clock,
   FileQuestion,
+  AlertCircle,
   Eye
 } from "lucide-react"
-import { getAllCases, type Case } from "@/lib/api"
+import { getMyCases, type Case } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
-import { CreateCaseDialog } from "@/components/admin/cases/CreateCaseDialog"
+import { CaseDetailDialog } from "@/components/cases/case-detail-dialog"
 
 // Format number as AED currency
-const formatAED = (amount: number | string) => {
+const formatAED = (amount: number | string | null) => {
+  if (!amount) return 'N/A'
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
   return new Intl.NumberFormat('en-AE', {
     style: 'currency',
@@ -36,15 +41,29 @@ const formatAED = (amount: number | string) => {
 // Skeleton Components
 function PageHeaderSkeleton() {
   return (
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-4">
-        <Skeleton className="h-8 w-8 rounded" />
-        <div className="space-y-2">
-          <Skeleton className="h-9 w-64" />
-          <Skeleton className="h-5 w-96" />
-        </div>
+    <div className="flex items-center gap-4">
+      <Skeleton className="h-8 w-8 rounded" />
+      <div className="space-y-2">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="h-5 w-96" />
       </div>
-      <Skeleton className="h-10 w-48" />
+    </div>
+  )
+}
+
+function SummaryCardsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <Card key={i}>
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-32" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-8 w-16" />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }
@@ -55,10 +74,10 @@ function TableSkeleton() {
       <TableHeader>
         <TableRow>
           <TableHead>Case ID</TableHead>
-          <TableHead>Employee</TableHead>
+          <TableHead>Title</TableHead>
           <TableHead>Category</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead>Amount</TableHead>
+          <TableHead>Deduction Amount</TableHead>
           <TableHead className="text-right">Action</TableHead>
         </TableRow>
       </TableHeader>
@@ -66,11 +85,11 @@ function TableSkeleton() {
         {[...Array(5)].map((_, i) => (
           <TableRow key={i}>
             <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-            <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+            <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+            <TableCell><Skeleton className="h-6 w-28" /></TableCell>
             <TableCell><Skeleton className="h-6 w-24" /></TableCell>
             <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-            <TableCell className="text-right"><Skeleton className="h-8 w-32" /></TableCell>
+            <TableCell className="text-right"><Skeleton className="h-8 w-24" /></TableCell>
           </TableRow>
         ))}
       </TableBody>
@@ -78,22 +97,24 @@ function TableSkeleton() {
   )
 }
 
-export default function CaseDashboardPage() {
+export default function MyCasesPage() {
   const { toast } = useToast()
   const [cases, setCases] = React.useState<Case[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false)
+  const [selectedCase, setSelectedCase] = React.useState<Case | null>(null)
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = React.useState(false)
 
-  const fetchData = React.useCallback(async () => {
+  const fetchCases = React.useCallback(async () => {
     setIsLoading(true)
     try {
-      const data = await getAllCases()
-      setCases(data)
+      const data = await getMyCases()
+      // Ensure data is an array
+      setCases(Array.isArray(data) ? data : [])
     } catch (error: any) {
-      toast({ 
-        title: "Error", 
-        description: "Could not load cases.", 
-        variant: "destructive" 
+      toast({
+        title: "Error",
+        description: "Could not load your cases.",
+        variant: "destructive"
       })
     } finally {
       setIsLoading(false)
@@ -101,8 +122,13 @@ export default function CaseDashboardPage() {
   }, [toast])
 
   React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
+    fetchCases()
+  }, [fetchCases])
+
+  const handleRowClick = (caseItem: Case) => {
+    setSelectedCase(caseItem)
+    setIsDetailDialogOpen(true)
+  }
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { className: string; icon: any }> = {
@@ -124,29 +150,19 @@ export default function CaseDashboardPage() {
   // Calculate statistics
   const totalCases = cases.length
   const openCases = cases.filter(c => c.status === 'Open' || c.status === 'Under Review').length
+  const approvedCases = cases.filter(c => c.status === 'Approved').length
   const closedCases = cases.filter(c => c.status === 'Closed').length
-  const totalDeductions = cases.reduce((sum, c) => sum + Number(c.deduction_amount || 0), 0)
 
   if (isLoading) {
     return (
       <MainLayout>
         <div className="space-y-6">
           <PageHeaderSkeleton />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Card key={i}>
-                <CardHeader className="pb-3">
-                  <Skeleton className="h-4 w-32" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-8 w-16" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <SummaryCardsSkeleton />
           <Card>
             <CardHeader>
               <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-64" />
             </CardHeader>
             <CardContent>
               <TableSkeleton />
@@ -161,25 +177,16 @@ export default function CaseDashboardPage() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <FolderKanban className="h-8 w-8 text-primary" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold">HR Case Management</h1>
-              <p className="text-muted-foreground">
-                Track and manage all employee-related cases and incidents
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <FolderKanban className="h-8 w-8 text-primary" />
           </div>
-          <Button 
-            onClick={() => setIsCreateDialogOpen(true)}
-            className="bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create New Case
-          </Button>
+          <div>
+            <h1 className="text-3xl font-bold">My Cases</h1>
+            <p className="text-muted-foreground">
+              View and track all cases related to you
+            </p>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -212,25 +219,23 @@ export default function CaseDashboardPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                 <CheckCircle className="h-4 w-4" />
-                Closed Cases
+                Approved
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600">{closedCases}</div>
+              <div className="text-3xl font-bold text-green-600">{approvedCases}</div>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <XCircle className="h-4 w-4" />
-                Total Deductions
+                <CheckCircle className="h-4 w-4" />
+                Closed
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatAED(totalDeductions)}
-              </div>
+              <div className="text-3xl font-bold text-blue-600">{closedCases}</div>
             </CardContent>
           </Card>
         </div>
@@ -240,7 +245,7 @@ export default function CaseDashboardPage() {
           <CardHeader>
             <CardTitle>All Cases</CardTitle>
             <CardDescription>
-              Complete list of all employee cases with their current status
+              Click on any case to view detailed information
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,16 +257,9 @@ export default function CaseDashboardPage() {
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold mb-2">No Cases Found</h3>
-                <p className="text-muted-foreground mb-4">
-                  There are no active cases at the moment
+                <p className="text-muted-foreground">
+                  You don't have any cases assigned to you at the moment
                 </p>
-                <Button 
-                  onClick={() => setIsCreateDialogOpen(true)} 
-                  variant="outline"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create First Case
-                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -269,7 +267,7 @@ export default function CaseDashboardPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Case ID</TableHead>
-                      <TableHead>Employee</TableHead>
+                      <TableHead>Title</TableHead>
                       <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Deduction Amount</TableHead>
@@ -277,31 +275,29 @@ export default function CaseDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {cases.map(item => (
-                      <TableRow key={item.id} className="hover:bg-muted/50">
+                    {cases.map((caseItem) => (
+                      <TableRow 
+                        key={caseItem.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleRowClick(caseItem)}
+                      >
                         <TableCell className="font-mono font-medium">
-                          {item.case_id_text}
+                          {caseItem.case_id_text}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {item.employee_name}
+                          {caseItem.title}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {item.category_name}
+                            {caseItem.category_name}
                           </Badge>
                         </TableCell>
-                        <TableCell>{getStatusBadge(item.status)}</TableCell>
+                        <TableCell>{getStatusBadge(caseItem.status)}</TableCell>
                         <TableCell className="font-mono font-medium text-red-600">
-                          {formatAED(item.deduction_amount || 0)}
+                          {formatAED(caseItem.deduction_amount)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button asChild variant="outline" size="sm">
-                            <Link href={`/admin/cases/${item.id}`}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                              <ArrowRight className="h-4 w-4 ml-2" />
-                            </Link>
-                          </Button>
+                          <Eye className="h-4 w-4 inline-block text-muted-foreground" />
                         </TableCell>
                       </TableRow>
                     ))}
@@ -312,11 +308,11 @@ export default function CaseDashboardPage() {
           </CardContent>
         </Card>
       </div>
-      
-      <CreateCaseDialog
-        open={isCreateDialogOpen}
-        onOpenChange={setIsCreateDialogOpen}
-        onSuccess={fetchData}
+
+      <CaseDetailDialog
+        caseItem={selectedCase}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
       />
     </MainLayout>
   )

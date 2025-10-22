@@ -128,7 +128,7 @@ export function LeaveEncashmentDetailsDialog({ request, open, onOpenChange }: Pr
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="sm:max-w-2xl h-[80vh] overflow-x-scroll">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-2xl">
             <FileText className="h-6 w-6" />

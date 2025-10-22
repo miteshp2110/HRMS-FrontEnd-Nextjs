@@ -799,7 +799,7 @@ export function JobEmploymentTab({
                   name="shift_id" 
                   value={String(formData.shift_id || '')} 
                   onValueChange={(value) => handleSelectChange("shift_id", value)}
-                  disabled={isSaving}
+                  disabled={true}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Shift" />
