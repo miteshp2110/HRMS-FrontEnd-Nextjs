@@ -42,7 +42,7 @@ const commonAdjustments = {
     ]
 };
 
-export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipId }: Props) {
+export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipId  }: Props) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [usePreset, setUsePreset] = React.useState(false);
