@@ -570,7 +570,7 @@ const adminNavigations: NavItem[] = [
       { title: "Employee's Cost", href: "/management/expense-on-employees", icon: DollarSignIcon, permission: "expenses.manage" },
       { title: "Employee Cases", href: "/admin/cases", icon: FolderKanban, permission: "cases.manage" },
       { title: "EOS Settlements", href: "/admin/eos", icon: Handshake, permission: "eos.manage" },
-      // { title: "Employee Reports", href: "/management/employee-reports", icon: BarChart, permission: "user.manage" },
+      { title: "Employee Reports", href: "/management/employee-reports", icon: BarChart, permission: "user.manage" },
     ],
   },
   {

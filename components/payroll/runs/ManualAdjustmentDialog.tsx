@@ -17,6 +17,7 @@ interface Props {
     onOpenChange: (open: boolean) => void;
     onSuccess: () => void;
     payslipId: number;
+    onExecute: () => void;
 }
 
 const commonAdjustments = {
@@ -42,7 +43,7 @@ const commonAdjustments = {
     ]
 };
 
-export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipId  }: Props) {
+export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipId ,onExecute }: Props) {
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = React.useState(false);
     const [usePreset, setUsePreset] = React.useState(false);
@@ -108,6 +109,7 @@ export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipI
 
             onSuccess();
             onOpenChange(false);
+            await onExecute()
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -229,25 +231,23 @@ export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipI
                     {/* Amount */}
                     <div>
                         <Label htmlFor="amount">
-                            Amount (₹) <span className="text-red-500">*</span>
+                            Amount (AED) <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative mt-1">
-                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                            {/* <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">AED </span> */}
                             <Input
                                 id="amount"
                                 type="number"
-                                step="0.01"
-                                min="0.01"
                                 value={formData.amount}
                                 onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                                 placeholder="0.00"
-                                className="pl-8"
+                                
                                 required
                             />
                         </div>
                         {formData.amount && parseFloat(formData.amount) > 0 && (
                             <p className="text-xs text-gray-500 mt-1">
-                                Amount: ₹{parseFloat(formData.amount).toLocaleString()}
+                                Amount:AED {parseFloat(formData.amount).toLocaleString()}
                             </p>
                         )}
                     </div>
@@ -280,7 +280,7 @@ export function ManualAdjustmentDialog({ open, onOpenChange, onSuccess, payslipI
                                     <div className={`font-bold ${
                                         formData.component_type === 'earning' ? 'text-green-600' : 'text-red-600'
                                     }`}>
-                                        {formData.component_type === 'earning' ? '+' : '-'}₹{parseFloat(formData.amount).toLocaleString()}
+                                        {formData.component_type === 'earning' ? '+' : '-'}AED {parseFloat(formData.amount).toLocaleString()}
                                     </div>
                                 </div>
                             </CardContent>

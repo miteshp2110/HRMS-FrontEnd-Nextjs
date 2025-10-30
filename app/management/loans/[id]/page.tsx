@@ -1394,6 +1394,7 @@ export default function LoanApplicationPage() {
                                         <Button
                                           size="sm"
                                           variant="ghost"
+                                          disabled={application.is_advance==1}
                                           onClick={() => handleRescheduleClick(row)}
                                         >
                                           <Edit className="h-4 w-4" />

@@ -347,7 +347,7 @@ export function ExpenseDetailsDialog({ claim, open, onOpenChange, onActionSucces
                 </Card>
 
                 {/* Reimbursement Details */}
-                {(claim.status === 'Reimbursed' || claim.status === 'Processed') && (
+                {(claim.status === 'Reimbursed' || claim.status === 'Locked') && (
                   <Card className="border-green-200 dark:border-green-900">
                     <CardHeader className="bg-gradient-to-r from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
                       <CardTitle className="text-green-900 dark:text-green-100 flex items-center gap-2">
@@ -364,7 +364,7 @@ export function ExpenseDetailsDialog({ claim, open, onOpenChange, onActionSucces
 
                         <div className="p-4 bg-muted rounded-lg">
                           <div className="text-sm text-muted-foreground mb-1">
-                            {claim.reimbursement_method === 'Payroll' ? 'Payroll ID' : 'Transaction ID'}
+                            {claim.reimbursement_method === 'Payroll' ? 'Payslip Id' : 'Transaction ID'}
                           </div>
                           <div className="font-mono font-semibold">
                             {claim.reimbursement_method === 'Payroll' 

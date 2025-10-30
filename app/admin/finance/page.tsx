@@ -1,47 +1,4 @@
 
-
-// "use client"
-
-// import * as React from "react";
-// import { MainLayout } from "@/components/main-layout";
-// import LoanFinanceTab from "@/components/management/finance/loan-finance-tab";
-// import { Tabs } from "@radix-ui/react-tabs";
-// import { TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-// import ExpenseFinanceTab from "@/components/management/finance/expense-finance-tab";
-// import { Banknote } from "lucide-react";
-
-
-// export default function FinancePage() {
-    
-
-//     return (
-//         <MainLayout>
-//             <div className="flex items-center gap-4">
-//                     <Banknote className="h-8 w-8" />
-//                     <div>
-//                         <h1 className="text-3xl font-bold">Finance & Reimbursements</h1>
-//                         <p className="text-muted-foreground">Manage expense reimbursement settings and financial configurations.</p>
-//                     </div>
-//                 </div>
-//             <Tabs defaultValue="expense" className="mt-2">
-//                 <TabsList className="grid w-full grid-cols-2">
-//                     <TabsTrigger value="expense">Expense</TabsTrigger>
-//                     <TabsTrigger value="loans">Loans</TabsTrigger>
-//                 </TabsList>
-
-//                 <TabsContent value="expense" className="mt-5">
-//                     <ExpenseFinanceTab/>
-//                 </TabsContent>
-//                 <TabsContent value="loans" className="mt-5">
-//                     <LoanFinanceTab/>
-//                 </TabsContent>
-
-//             </Tabs>
-//         </MainLayout>
-//     )
-// }
-
-
 "use client"
 
 import * as React from "react";
