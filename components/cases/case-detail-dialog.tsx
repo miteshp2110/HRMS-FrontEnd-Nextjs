@@ -26,7 +26,8 @@ import {
   FileQuestion,
   Paperclip,
   Download,
-  Calendar
+  Calendar,
+  LockIcon
 } from "lucide-react"
 import { type Case } from "@/lib/api"
 
@@ -58,6 +59,7 @@ export function CaseDetailDialog({ caseItem, open, onOpenChange }: CaseDetailDia
       'Approved': { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100', icon: CheckCircle },
       'Rejected': { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100', icon: XCircle },
       'Closed': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: CheckCircle },
+      'Locked': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: LockIcon },
     }
     const { className, icon: Icon } = statusMap[status] || { className: '', icon: FileQuestion }
     return (
@@ -217,6 +219,20 @@ export function CaseDetailDialog({ caseItem, open, onOpenChange }: CaseDetailDia
               </CardContent>
             </Card>
           )}
+
+         {(caseItem.status==='Locked' || caseItem.status==='Closed') && 
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Deduction Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Payslip Reference</span>
+                <span className="font-medium">{caseItem.payslip_id??'Deducted from Settlements'}</span>
+              </div>
+            </CardContent>
+          </Card>
+         }
 
           {/* Case Details */}
           <Card>

@@ -20,7 +20,8 @@ import {
   Clock,
   FileQuestion,
   AlertCircle,
-  Eye
+  Eye,
+  LockIcon
 } from "lucide-react"
 import { getMyCases, type Case } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
@@ -137,6 +138,7 @@ export default function MyCasesPage() {
       'Approved': { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100', icon: CheckCircle },
       'Rejected': { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100', icon: XCircle },
       'Closed': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: CheckCircle },
+      'Locked': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: LockIcon },
     }
     const { className, icon: Icon } = statusMap[status] || { className: '', icon: FileQuestion }
     return (

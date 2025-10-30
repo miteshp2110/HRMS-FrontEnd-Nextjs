@@ -135,7 +135,8 @@ import {
   FolderKanban,
   XCircle,
   Clock,
-  Download
+  Download,
+  Lock
 } from "lucide-react"
 
 // Format number as AED currency
@@ -234,6 +235,7 @@ export default function CaseDetailPage() {
       'Approved': { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100', icon: CheckCircle },
       'Rejected': { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100', icon: XCircle },
       'Closed': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: CheckCircle },
+      'Locked': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: Lock },
     }
     const { className, icon: Icon } = statusMap[status] || { className: '', icon: FolderKanban }
     return (
@@ -456,6 +458,88 @@ export default function CaseDetailPage() {
                 ) : null}
               </CardContent>
             </Card>
+
+            {/* Deduction Info card - Enhanced */}
+{(caseDetails.status === 'Locked' || caseDetails.status === 'Closed') && (
+  <Card className="border-l-4 border-l-primary/30">
+    <CardHeader className="pb-3">
+      <div className="flex items-center justify-between">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <svg
+            className="w-4 h-4 text-primary"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+          Deduction Information
+        </CardTitle>
+        <div
+          className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+            caseDetails.status === 'Locked'
+              ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400 border border-orange-500/25'
+              : 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/25'
+          }`}
+        >
+          {caseDetails.status}
+        </div>
+      </div>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="group">
+        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+          Payslip Reference
+        </div>
+        <div className="flex items-center gap-2">
+          {caseDetails.payslip_id ? (
+            <>
+              <div className="font-mono text-sm font-semibold text-foreground bg-secondary/50 px-3 py-1.5 rounded-md border border-border/50">
+                {caseDetails.payslip_id}
+              </div>
+              <svg
+                className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
+              </svg>
+            </>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground italic">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Deducted in Final Settlements
+            </div>
+          )}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+)}
 
             {/* Case Info Card */}
             <Card>

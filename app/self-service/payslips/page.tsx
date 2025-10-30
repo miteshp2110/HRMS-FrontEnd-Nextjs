@@ -8,66 +8,44 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Download, FileText, Search, Filter, Eye, TrendingUp, DollarSign } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Calendar, FileText, Search, Eye, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getPayrollCycles, getMyPayslipForCycle, type PayrollCycle, type PayslipDetails } from "@/lib/api";
+import { getPayrollCycles, type PayrollCycle } from "@/lib/api";
 import { MainLayout } from "@/components/main-layout";
-
-interface PayslipRecord extends PayslipDetails {
-    cycle_name: string;
-    cycle_start_date: string;
-    cycle_end_date: string;
-    cycle_status: string;
-}
 
 export default function MyPayslipsPage() {
     const router = useRouter();
     const { toast } = useToast();
     
     const [cycles, setCycles] = React.useState<PayrollCycle[]>([]);
-    const [payslips, setPayslips] = React.useState<PayslipRecord[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [searchTerm, setSearchTerm] = React.useState('');
     const [statusFilter, setStatusFilter] = React.useState('all');
     const [yearFilter, setYearFilter] = React.useState('all');
 
-    // Fetch cycles and payslips
+    // Fetch cycles only
     React.useEffect(() => {
         const fetchData = async () => {
             try {
                 setIsLoading(true);
                 const cyclesData = await getPayrollCycles();
-                setCycles(cyclesData);
-
-                // Fetch payslips for finalized/paid cycles
-                const finalizedCycles = cyclesData.filter(c => ['Finalized', 'Paid'].includes(c.status));
-                const payslipPromises = finalizedCycles.map(async (cycle) => {
-                    try {
-                        const payslip = await getMyPayslipForCycle(cycle.id);
-                        return {
-                            ...payslip,
-                            cycle_name: cycle.cycle_name,
-                            cycle_start_date: cycle.start_date,
-                            cycle_end_date: cycle.end_date,
-                            cycle_status: cycle.status
-                        };
-                    } catch (error) {
-                        // Payslip might not exist for this employee in this cycle
-                        return null;
-                    }
-                });
-
-                const payslipResults = await Promise.all(payslipPromises);
-                const validPayslips = payslipResults.filter(p => p !== null) as PayslipRecord[];
+                
+                // Filter to show only Finalized and Paid cycles
+                const availableCycles = cyclesData.filter(c => 
+                    ['Finalized', 'Paid'].includes(c.status)
+                );
                 
                 // Sort by end date descending
-                validPayslips.sort((a, b) => new Date(b.cycle_end_date).getTime() - new Date(a.cycle_end_date).getTime());
+                availableCycles.sort((a, b) => 
+                    new Date(b.end_date).getTime() - new Date(a.end_date).getTime()
+                );
                 
-                setPayslips(validPayslips);
+                setCycles(availableCycles);
             } catch (error: any) {
                 toast({
                     title: "Error",
-                    description: `Failed to load payslips: ${error.message}`,
+                    description: `Failed to load payroll cycles: ${error.message}`,
                     variant: "destructive"
                 });
             } finally {
@@ -78,250 +56,254 @@ export default function MyPayslipsPage() {
         fetchData();
     }, [toast]);
 
-    // Filter payslips
-    const filteredPayslips = React.useMemo(() => {
-        return payslips.filter(payslip => {
-            const matchesSearch = payslip.cycle_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                payslip.employee_name.toLowerCase().includes(searchTerm.toLowerCase());
+    // Filter cycles
+    const filteredCycles = React.useMemo(() => {
+        return cycles.filter(cycle => {
+            const matchesSearch = cycle.cycle_name.toLowerCase().includes(searchTerm.toLowerCase());
             
-            const matchesStatus = statusFilter === 'all' || payslip.cycle_status.toLowerCase() === statusFilter.toLowerCase();
+            const matchesStatus = statusFilter === 'all' || 
+                                cycle.status.toLowerCase() === statusFilter.toLowerCase();
             
-            const payslipYear = new Date(payslip.cycle_end_date).getFullYear().toString();
-            const matchesYear = yearFilter === 'all' || payslipYear === yearFilter;
+            const cycleYear = new Date(cycle.end_date).getFullYear().toString();
+            const matchesYear = yearFilter === 'all' || cycleYear === yearFilter;
             
             return matchesSearch && matchesStatus && matchesYear;
         });
-    }, [payslips, searchTerm, statusFilter, yearFilter]);
+    }, [cycles, searchTerm, statusFilter, yearFilter]);
 
-    // Calculate summary stats
-    const currentYear = new Date().getFullYear();
-    const currentYearPayslips = payslips.filter(p => new Date(p.cycle_end_date).getFullYear() === currentYear);
-    const totalEarningsThisYear = currentYearPayslips.reduce((sum, p) => sum + parseFloat(p.gross_earnings), 0);
-    const totalDeductionsThisYear = currentYearPayslips.reduce((sum, p) => sum + parseFloat(p.total_deductions), 0);
-    const totalNetPayThisYear = currentYearPayslips.reduce((sum, p) => sum + parseFloat(p.net_pay), 0);
-
-    const handleViewPayslip = (payslipId: number) => {
-        router.push(`/payroll/payslips/${payslipId}/review`);
-    };
-
-    const handleDownloadPayslip = (payslip: PayslipRecord) => {
-        // This would generate and download a PDF of the payslip
-        toast({
-            title: "Download Started",
-            description: `Downloading payslip for ${payslip.cycle_name}...`
-        });
-        // Implementation would depend on your PDF generation service
+    const handleViewCycle = (cycleId: number) => {
+        router.push(`/self-service/payslips/${cycleId}`);
     };
 
     // Get unique years for filter
     const availableYears = React.useMemo(() => {
-        const years = [...new Set(payslips.map(p => new Date(p.cycle_end_date).getFullYear()))];
+        const years = [...new Set(cycles.map(c => new Date(c.end_date).getFullYear()))];
         return years.sort((a, b) => b - a);
-    }, [payslips]);
-
-    if (isLoading) {
-        return (
-            <div className="container mx-auto p-6">
-                <div className="flex items-center justify-center h-64">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="mt-4 text-gray-600">Loading your payslips...</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+    }, [cycles]);
 
     return (
         <MainLayout>
-        <div className="container mx-auto p-6 space-y-6">
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold">My Payslips (Under Patch)</h1>
-                    <p className="text-gray-600">View and download your payslip history</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{filteredPayslips.length} payslips</Badge>
-                </div>
-            </div>
-
-            {/* Year Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">YTD Gross Earnings</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">₹{totalEarningsThisYear.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {currentYearPayslips.length} payslips in {currentYear}
+            <div className="container mx-auto p-2 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                            My Payslips
+                        </h1>
+                        <p className="text-gray-600 dark:text-gray-400 mt-1">
+                            View your payroll cycle history and details
                         </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">YTD Deductions</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-red-600">₹{totalDeductionsThisYear.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Total deductions this year
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">YTD Net Pay</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">₹{totalNetPayThisYear.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">
-                            Net earnings this year
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Filters */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg">Filter Payslips</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col md:flex-row gap-4">
-                        <div className="flex-1">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                                <Input
-                                    placeholder="Search payslips..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                        </div>
-                        <Select value={statusFilter} onValueChange={setStatusFilter}>
-                            <SelectTrigger className="w-full md:w-48">
-                                <SelectValue placeholder="Filter by status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Statuses</SelectItem>
-                                <SelectItem value="finalized">Finalized</SelectItem>
-                                <SelectItem value="paid">Paid</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={yearFilter} onValueChange={setYearFilter}>
-                            <SelectTrigger className="w-full md:w-32">
-                                <SelectValue placeholder="Year" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Years</SelectItem>
-                                {availableYears.map(year => (
-                                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
                     </div>
-                </CardContent>
-            </Card>
+                    <div className="flex items-center space-x-2">
+                        <Badge 
+                            variant="outline" 
+                            className="bg-blue-50 dark:bg-zinc-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-zinc-800"
+                        >
+                            {filteredCycles.length} cycles
+                        </Badge>
+                    </div>
+                </div>
 
-            {/* Payslips Table */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Payslip History</CardTitle>
-                    <CardDescription>
-                        Your complete payslip records. Click to view details or download.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {filteredPayslips.length === 0 ? (
-                        <div className="text-center py-12">
-                            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-600 mb-2">No Payslips Found</h3>
-                            <p className="text-gray-500">
-                                {searchTerm || statusFilter !== 'all' || yearFilter !== 'all' 
-                                    ? 'No payslips match your current filters.'
-                                    : 'You don\'t have any payslips yet.'
-                                }
-                            </p>
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Pay Period</TableHead>
-                                    <TableHead>Cycle Name</TableHead>
-                                    <TableHead className="text-right">Gross Earnings</TableHead>
-                                    <TableHead className="text-right">Deductions</TableHead>
-                                    <TableHead className="text-right">Net Pay</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="w-32">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredPayslips.map((payslip) => (
-                                    <TableRow key={payslip.id} className="hover:bg-gray-50">
-                                        <TableCell>
-                                            <div className="flex items-center">
-                                                <Calendar className="w-4 h-4 text-gray-400 mr-2" />
-                                                <div className="text-sm">
-                                                    <div className="font-medium">
-                                                        {new Date(payslip.cycle_start_date).toLocaleDateString()} - 
-                                                        {new Date(payslip.cycle_end_date).toLocaleDateString()}
-                                                    </div>
-                                                    <div className="text-gray-500 text-xs">
-                                                        {Math.ceil((new Date(payslip.cycle_end_date).getTime() - new Date(payslip.cycle_start_date).getTime()) / (1000 * 60 * 60 * 24))} days
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="font-medium">{payslip.cycle_name}</TableCell>
-                                        <TableCell className="text-right font-semibold text-green-600">
-                                            ₹{parseFloat(payslip.gross_earnings).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell className="text-right font-semibold text-red-600">
-                                            ₹{parseFloat(payslip.total_deductions).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold text-blue-600">
-                                            ₹{parseFloat(payslip.net_pay).toLocaleString()}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={payslip.cycle_status === 'Paid' ? 'default' : 'secondary'}>
-                                                {payslip.cycle_status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex space-x-2">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleViewPayslip(payslip.id)}
-                                                >
-                                                    <Eye className="w-3 h-3" />
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleDownloadPayslip(payslip)}
-                                                >
-                                                    <Download className="w-3 h-3" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
+                {/* Filters */}
+                {isLoading ? (
+                    <Card className="dark:bg-black dark:border-zinc-800">
+                        <CardHeader>
+                            <Skeleton className="h-6 w-32 dark:bg-zinc-900" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <Skeleton className="h-10 flex-1 dark:bg-zinc-900" />
+                                <Skeleton className="h-10 w-full md:w-48 dark:bg-zinc-900" />
+                                <Skeleton className="h-10 w-full md:w-32 dark:bg-zinc-900" />
+                            </div>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <Card className="dark:bg-black dark:border-zinc-800">
+                        <CardHeader>
+                            <CardTitle className="text-lg text-gray-900 dark:text-white">
+                                Filter Cycles
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col md:flex-row gap-4">
+                                <div className="flex-1">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
+                                        <Input
+                                            placeholder="Search cycles..."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="pl-10 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white dark:placeholder-gray-500"
+                                        />
+                                    </div>
+                                </div>
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-full md:w-48 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white">
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent className="dark:bg-black dark:border-zinc-800">
+                                        <SelectItem value="all">All Statuses</SelectItem>
+                                        <SelectItem value="finalized">Finalized</SelectItem>
+                                        <SelectItem value="paid">Paid</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <Select value={yearFilter} onValueChange={setYearFilter}>
+                                    <SelectTrigger className="w-full md:w-32 dark:bg-zinc-950 dark:border-zinc-800 dark:text-white">
+                                        <SelectValue placeholder="Year" />
+                                    </SelectTrigger>
+                                    <SelectContent className="dark:bg-black dark:border-zinc-800">
+                                        <SelectItem value="all">All Years</SelectItem>
+                                        {availableYears.map(year => (
+                                            <SelectItem key={year} value={year.toString()}>
+                                                {year}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Cycles Table */}
+                <Card className="dark:bg-black dark:border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-gray-900 dark:text-white">
+                            Payroll Cycles
+                        </CardTitle>
+                        <CardDescription className="dark:text-gray-400">
+                            View detailed payslip information for each completed payroll cycle
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-4">
+                                {[1, 2, 3, 4, 5].map((i) => (
+                                    <div key={i} className="flex items-center space-x-4 p-4">
+                                        <Skeleton className="h-12 w-12 rounded dark:bg-zinc-900" />
+                                        <div className="flex-1 space-y-2">
+                                            <Skeleton className="h-4 w-3/4 dark:bg-zinc-900" />
+                                            <Skeleton className="h-3 w-1/2 dark:bg-zinc-900" />
+                                        </div>
+                                        <Skeleton className="h-8 w-20 dark:bg-zinc-900" />
+                                        <Skeleton className="h-9 w-24 dark:bg-zinc-900" />
+                                    </div>
                                 ))}
-                            </TableBody>
-                        </Table>
-                    )}
-                </CardContent>
-            </Card>
-        </div>
+                            </div>
+                        ) : filteredCycles.length === 0 ? (
+                            <div className="text-center py-12">
+                                <FileText className="w-16 h-16 text-gray-300 dark:text-zinc-700 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                                    No Cycles Found
+                                </h3>
+                                <p className="text-gray-500 dark:text-gray-500">
+                                    {searchTerm || statusFilter !== 'all' || yearFilter !== 'all' 
+                                        ? 'No cycles match your current filters.'
+                                        : 'You don\'t have any payroll cycles yet.'
+                                    }
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="dark:border-zinc-800 hover:bg-gray-50 dark:hover:bg-zinc-950">
+                                            <TableHead className="dark:text-gray-400">Cycle Name</TableHead>
+                                            <TableHead className="dark:text-gray-400">Pay Period</TableHead>
+                                            <TableHead className="dark:text-gray-400">Duration</TableHead>
+                                            <TableHead className="dark:text-gray-400">Status</TableHead>
+                                            <TableHead className="w-32 dark:text-gray-400">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredCycles.map((cycle) => {
+                                            const durationDays = Math.ceil(
+                                                (new Date(cycle.end_date).getTime() - new Date(cycle.start_date).getTime()) / 
+                                                (1000 * 60 * 60 * 24)
+                                            )+1;
+                                            
+                                            return (
+                                                <TableRow 
+                                                    key={cycle.id} 
+                                                    className="hover:bg-gray-50 dark:hover:bg-zinc-950 dark:border-zinc-800 transition-colors"
+                                                >
+                                                    <TableCell className="font-medium text-gray-900 dark:text-white">
+                                                        <div className="flex items-center">
+                                                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-violet-500 dark:from-blue-600 dark:to-violet-600 flex items-center justify-center mr-3">
+                                                                <FileText className="h-5 w-5 text-white" />
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-semibold">{cycle.cycle_name}</div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-500">
+                                                                    Cycle #{cycle.id}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center text-gray-700 dark:text-gray-300">
+                                                            <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2" />
+                                                            <div className="text-sm">
+                                                                <div className="font-medium">
+                                                                    {new Date(cycle.start_date).toLocaleDateString('en-AE', { 
+                                                                        day: 'numeric', 
+                                                                        month: 'short', 
+                                                                        year: 'numeric' 
+                                                                    })}
+                                                                </div>
+                                                                <div className="text-gray-500 dark:text-gray-500 text-xs">
+                                                                    to {new Date(cycle.end_date).toLocaleDateString('en-AE', { 
+                                                                        day: 'numeric', 
+                                                                        month: 'short', 
+                                                                        year: 'numeric' 
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge 
+                                                            variant="outline" 
+                                                            className="bg-gray-50 dark:bg-zinc-950 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-zinc-800"
+                                                        >
+                                                            <Clock className="w-3 h-3 mr-1" />
+                                                            {durationDays} days
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge 
+                                                            variant={cycle.status === 'Paid' ? 'default' : 'secondary'}
+                                                            className={
+                                                                cycle.status === 'Paid' 
+                                                                    ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900' 
+                                                                    : 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900'
+                                                            }
+                                                        >
+                                                            {cycle.status}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            onClick={() => handleViewCycle(cycle.id)}
+                                                            className="bg-white dark:bg-zinc-950 hover:bg-gray-50 dark:hover:bg-zinc-900 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-300"
+                                                        >
+                                                            <Eye className="w-3 h-3 mr-1.5" />
+                                                            View
+                                                        </Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
         </MainLayout>
     );
 }

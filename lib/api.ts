@@ -1977,7 +1977,7 @@ export interface ExpenseClaim {
   description?: string;
   amount: number;
   expense_date: string;
-  status: 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Reimbursed';
+  status: 'Pending' | 'Approved' | 'Rejected' | 'Processed' | 'Reimbursed' | 'Locked';
   receipt_url?: string;
   rejection_reason?: string | null;
   transaction_id?: string | null;
@@ -2579,7 +2579,7 @@ export interface Case {
     category_name: string;
     title: string;
     description: string;
-    status: 'Open' | 'Under Review' | 'Approved' | 'Rejected' | 'Closed';
+    status: 'Open' | 'Under Review' | 'Approved' | 'Rejected' | 'Closed' | 'Locked';
     deduction_amount: string | null;
     is_deduction_synced: boolean;
     raised_by_id: number;
@@ -2588,6 +2588,7 @@ export interface Case {
     rejection_reason: string | null;
     created_at: string;
     attachments?: CaseFile[];
+    payslip_id?: number
 }
 
 // Case Categories
@@ -3040,8 +3041,8 @@ export async function addManualAdjustment(payslipId: number, data: {
     });
 }
 
-export async function finalizePayslip(payslipId: number): Promise<{ success: boolean; message: string }> {
-    return apiRequest(`/payroll/payslips/${payslipId}/finalize`, { method: 'PATCH' });
+export async function markCycleAsPaid(cycleId:number,jv:string): Promise<{ success: boolean; message: string }> {
+    return apiRequest(`/payroll/cycles/paid`, { method: 'PATCH' ,body:JSON.stringify({cycleId:cycleId,jv:jv})});
 }
 
 export async function updatePayslipStatus(payslipId: number, status: 'Reviewed'): Promise<{

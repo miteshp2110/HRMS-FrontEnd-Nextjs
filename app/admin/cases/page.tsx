@@ -16,7 +16,8 @@ import {
   CheckCircle,
   XCircle,
   FileQuestion,
-  Eye
+  Eye,
+  Lock
 } from "lucide-react"
 import { getAllCases, type Case } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
@@ -111,6 +112,7 @@ export default function CaseDashboardPage() {
       'Approved': { className: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100', icon: CheckCircle },
       'Rejected': { className: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100', icon: XCircle },
       'Closed': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: CheckCircle },
+      'Locked': { className: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100', icon: Lock },
     }
     const { className, icon: Icon } = statusMap[status] || { className: '', icon: FileQuestion }
     return (
