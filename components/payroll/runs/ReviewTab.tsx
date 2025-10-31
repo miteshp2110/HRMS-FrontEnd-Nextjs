@@ -57,9 +57,11 @@ import {
     UserCheck,
     Code,
     ArrowRight,
-    Calendar
+    Calendar,
+    Download
 } from "lucide-react";
 import { ManualAdjustmentDialog } from "./ManualAdjustmentDialog";
+import { generateDetailedPayslipPDF } from "@/lib/payslipPdfGenerator";
 
 // Currency formatter for AED
 const formatCurrency = (amount: number | string): string => {
@@ -319,6 +321,25 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange ,onExecute}: Pr
             setDeletingComponentId(null);
         }
     };
+
+    const handleDownload = () => {
+            try{
+    
+                generateDetailedPayslipPDF(selectedPayslip!,componentMap)
+                toast({
+                title: "Download Started",
+                description: "Generating your payslip PDF..."
+                });
+            }
+            catch(err){
+                toast({
+                variant:"destructive",
+                title: "Download Failed",
+                description: "Failed to generate payslip PDF..."
+            });
+            }
+            // Implement PDF download logic here
+        };
     
 
 
@@ -779,6 +800,12 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange ,onExecute}: Pr
                     )}
 
                     <DialogFooter>
+                        <Button 
+                            onClick={() => handleDownload()}
+                            className="dark:bg-green-300"
+                        >
+                            <Download />
+                        </Button>
                         {selectedPayslip?.status !== 'Finalized' && cycleStatus != 'Paid' && (
                             <Button 
                                 variant="outline" 
@@ -798,6 +825,7 @@ export function ReviewTab({ cycleId, cycleStatus, onStatusChange ,onExecute}: Pr
                         >
                             Close
                         </Button>
+                        
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

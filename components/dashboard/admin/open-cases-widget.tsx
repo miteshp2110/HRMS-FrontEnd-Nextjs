@@ -126,7 +126,7 @@ export function OpenCasesWidget() {
               size="sm"
               className="rounded-md text-xs h-7 px-2.5 shadow-sm bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:border-slate-300 dark:hover:border-zinc-600 transition-all group-hover:shadow flex-shrink-0"
             >
-              <Link href={`/admin/cases/${c.id}`} className="flex items-center gap-1">
+              <Link href={`/team/cases/${c.id}`} className="flex items-center gap-1">
                 View
                 <ArrowRight className="h-3 w-3 opacity-0 -ml-1 group-hover:opacity-100 group-hover:ml-0 transition-all" />
               </Link>
