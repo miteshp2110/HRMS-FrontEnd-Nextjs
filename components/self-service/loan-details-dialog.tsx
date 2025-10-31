@@ -242,7 +242,7 @@ export function LoanDetailsDialog({ applicationId, open, onOpenChange }: LoanDet
                     <span>{details.loan_type_name}</span>
                   </DialogDescription>
                 </div>
-                <Button 
+                {/* <Button 
                   onClick={handleDownload} 
                   disabled={isDownloading}
                   variant="outline"
@@ -259,7 +259,7 @@ export function LoanDetailsDialog({ applicationId, open, onOpenChange }: LoanDet
                       Download
                     </>
                   )}
-                </Button>
+                </Button> */}
               </div>
             </>
           ) : (

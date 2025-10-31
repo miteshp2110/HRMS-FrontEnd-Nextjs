@@ -3084,6 +3084,9 @@ export async function deletePayrollCycle(cycleId: number): Promise<void> {
 export async function getMyPayslipForCycle(cycleId: number): Promise<PayslipDetails> {
     return apiRequest(`/payroll/cycles/${cycleId}/my-payslip`);
 }
+export async function getEmployeePayslipForCycle(cycleId: number,employeeId:number): Promise<PayslipDetails> {
+    return apiRequest(`/payroll/cycles/${cycleId}/employee-payslip/${employeeId}`);
+}
 export async function deleteComponentFromPayslip(payslipId: number,payslipDetailsId:number): Promise<void> {
     return apiRequest(`/payroll/payslips/${payslipId}/details/${payslipDetailsId}`,{method:"DELETE"});
 }

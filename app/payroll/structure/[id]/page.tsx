@@ -727,6 +727,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { SalaryRevisionsPage } from "@/components/payroll/revisions/salary-revisions-page"
+import EmployeePayslipTab from "@/components/payroll/payslips/payslipBaseTab"
 
 // Format number as AED currency
 const formatAED = (amount: number | string) => {
@@ -1099,9 +1100,10 @@ export default function EmployeeSalaryStructurePage() {
                 </div>
 
                 <Tabs defaultValue="structure" className="space-y-6">
-                    <TabsList className="grid w-full grid-cols-2">
+                    <TabsList className="grid w-full grid-cols-3">
                         <TabsTrigger value="structure">Structure Details</TabsTrigger>
                         <TabsTrigger value="revisions">Revisions & Audit</TabsTrigger>
+                        <TabsTrigger value="payslips">Payslips</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="structure" className="space-y-6">
@@ -1372,6 +1374,9 @@ export default function EmployeeSalaryStructurePage() {
 
                     <TabsContent value="revisions">
                         <SalaryRevisionsPage employeeId={employeeId}  />
+                    </TabsContent>
+                    <TabsContent value="payslips">
+                        <EmployeePayslipTab  employeeId={employeeId} />
                     </TabsContent>
                 </Tabs>
             </div>

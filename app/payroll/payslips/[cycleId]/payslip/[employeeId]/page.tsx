@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react";
@@ -38,9 +39,10 @@ import {
     Edit
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getMyPayslipForCycle, getPayrollComponents, type PayslipDetails } from "@/lib/api";
+import { getEmployeePayslipForCycle, getMyPayslipForCycle, getPayrollComponents, type PayslipDetails } from "@/lib/api";
 import { MainLayout } from "@/components/main-layout";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { generateDetailedPayslipPDF } from "@/lib/payslipPdfGenerator";
 
 // Currency formatter for AED
 const formatCurrency = (amount: number | string): string => {
@@ -145,7 +147,8 @@ export default function PayslipDetailsPage() {
     const router = useRouter();
     const { toast } = useToast();
     
-    const cycleId = parseInt(params.id as string);
+    const cycleId = parseInt(params.cycleId as string);
+    const employeeId = parseInt(params.employeeId as string);
     const [payslip, setPayslip] = React.useState<PayslipDetails | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     
@@ -158,7 +161,7 @@ export default function PayslipDetailsPage() {
         const fetchPayslip = async () => {
             try {
                 setIsLoading(true);
-                const data = await getMyPayslipForCycle(cycleId);
+                const data = await getEmployeePayslipForCycle(cycleId,employeeId);
                 setPayslip(data);
                 const cmap = await getPayrollComponents()
                 setComponentMap(toIdNameMap(cmap))
@@ -179,10 +182,21 @@ export default function PayslipDetailsPage() {
     }, [cycleId, toast]);
 
     const handleDownload = () => {
-        toast({
+        try{
+
+            generateDetailedPayslipPDF(payslip!,componentMap)
+            toast({
             title: "Download Started",
             description: "Generating your payslip PDF..."
+            });
+        }
+        catch(err){
+            toast({
+            variant:"destructive",
+            title: "Download Failed",
+            description: "Failed to generate payslip PDF..."
         });
+        }
         // Implement PDF download logic here
     };
 
@@ -334,13 +348,13 @@ export default function PayslipDetailsPage() {
                         >
                             {payslip.status}
                         </Badge>
-                        {/* <Button
+                        <Button
                             onClick={handleDownload}
                             className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white"
                         >
                             <Download className="w-4 h-4 mr-2" />
                             Download PDF
-                        </Button> */}
+                        </Button>
                     </div>
                 </div>
 
