@@ -4537,3 +4537,14 @@ export async function bulkUploadAttendance(
 
   return await response.json();
 }
+
+
+export async function changePassword(
+  newPassword: string,
+  employeeId: number,
+): Promise<{ success: boolean; message: string }> {
+  return apiRequest(`/auth/change-password`, {
+    method: "POST",
+    body: JSON.stringify({ password:newPassword,id:employeeId }),
+  });
+}

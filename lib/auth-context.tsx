@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const savedToken = localStorage.getItem("hr_token")
     const savedUser = localStorage.getItem("hr_user")
 
+
     if (savedToken && savedUser) {
       setToken(savedToken)
       setUser(JSON.parse(savedUser))
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(data.user)
         localStorage.setItem("hr_token", data.token)
         localStorage.setItem("hr_user", JSON.stringify(data.user))
+        localStorage.setItem("selectedTimezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
         return { success: true, message: data.message }
       }
 
