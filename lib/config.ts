@@ -106,6 +106,8 @@ export class ApiError extends Error {
   }
 }
 
+
+
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_CONFIG.BASE_URL}${endpoint}`
 
@@ -130,9 +132,26 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
   try {
     const response = await fetch(url, config)
 
+    let responseData: any = null
+
+    // Only attempt to parse JSON if response is not 204
+    if (response.status !== 204) {
+      responseData = await response.json().catch(() => ({}))
+    }
+
+    // Check for token expiration message
+    if (
+      responseData &&
+      responseData.message === "Authentication failed. Token has expired."
+    ) {
+      localStorage.clear()
+      // Optionally redirect to login page here, e.g.:
+      window.location.href = "/login"
+      throw new ApiError(401, responseData.message, responseData)
+    }
+
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new ApiError(response.status, errorData.message || "API request failed", errorData)
+      throw new ApiError(response.status, responseData?.message || "API request failed", responseData)
     }
 
     // Handle 204 No Content response
@@ -140,8 +159,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
       return Promise.resolve(null as T)
     }
 
-
-    return await response.json()
+    return responseData
   } catch (error) {
     if (error instanceof ApiError) {
       throw error
