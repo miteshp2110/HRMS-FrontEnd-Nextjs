@@ -4548,3 +4548,398 @@ export async function changePassword(
     body: JSON.stringify({ password:newPassword,id:employeeId }),
   });
 }
+
+
+
+// api.ts - Reports Section
+
+// ==========================================
+// REPORT INTERFACES
+// ==========================================
+
+// Base Filter Interface
+interface BaseReportFilters {
+  employeeIds?: number[];
+}
+
+// Employee Reports
+interface EmployeeMasterReportFilters extends BaseReportFilters {
+  jobIds?: number[];
+  includeInactive?: boolean;
+}
+
+interface InactiveProbationReportFilters extends BaseReportFilters {
+  reportType?: 'inactive' | 'probation' | 'both';
+}
+
+// Attendance Reports
+interface DailyAttendanceReportFilters extends BaseReportFilters {
+  fromDate: string; // YYYY-MM-DD
+  toDate: string;
+  attendanceStatus?: string;
+}
+
+interface LateEarlyReportFilters extends BaseReportFilters {
+  fromDate: string;
+  toDate: string;
+  reportType?: 'late' | 'early' | 'both';
+}
+
+interface OvertimeReportFilters extends BaseReportFilters {
+  fromDate: string;
+  toDate: string;
+  approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
+}
+
+// Leave Reports
+interface LeaveBalanceReportFilters extends BaseReportFilters {
+  leaveTypeIds?: number[];
+}
+
+interface LeaveApplicationsReportFilters extends BaseReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  leaveTypeIds?: number[];
+  approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
+}
+
+interface LeaveEncashmentReportFilters extends BaseReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
+}
+
+interface LeaveLedgerReportFilters extends BaseReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  leaveTypeIds?: number[];
+  transactionType?: 'Credit' | 'Debit' | 'Adjustment' | 'Allocation' | 'Used';
+}
+
+// Financial Reports
+interface LoanAmortizationReportFilters extends BaseReportFilters {
+  loanStatus?: 'Pending' | 'Approved' | 'Rejected' | 'Completed';
+  fromDate?: string;
+  toDate?: string;
+}
+
+interface ExpenseClaimReportFilters extends BaseReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  approvalStatus?: 'Pending' | 'Approved' | 'Rejected';
+  expenseCategory?: string;
+}
+
+// Performance Reports
+interface AppraisalSummaryReportFilters extends BaseReportFilters {
+  year?: number;
+  appraisalStatus?: string;
+}
+
+interface GoalKpiReportFilters extends BaseReportFilters {
+  year?: number;
+  goalStatus?: 'Not Started' | 'In Progress' | 'Completed' | 'Overdue' | 'Achieved';
+}
+
+// Recruitment Reports
+interface JobApplicationsReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  jobOpeningIds?: number[];
+  applicationStatus?: string;
+}
+
+// HR Management Reports
+interface HrCasesReportFilters extends BaseReportFilters {
+  fromDate?: string;
+  toDate?: string;
+  caseStatus?: 'Open' | 'Closed' | 'In Progress' | 'New' | 'Resolved';
+}
+
+// Configuration Reports
+interface ShiftConfigurationReportFilters {
+  shiftIds?: number[];
+  includeInactive?: boolean;
+}
+
+interface WorkWeekConfigurationReportFilters {
+  workWeekIds?: number[];
+  includeInactive?: boolean;
+}
+
+// API Response Interface
+interface ReportApiResponse {
+  success: boolean;
+  message?: string;
+  error?: string;
+}
+
+// ==========================================
+// REPORT API FUNCTIONS
+// ==========================================
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+
+/**
+ * Helper function to download Excel file from blob
+ */
+const downloadExcelFile = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Generic function to call report endpoints
+ */
+const generateReport = async (
+  endpoint: string,
+  filters: any,
+  defaultFilename: string
+): Promise<void> => {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/reports/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(filters),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to generate report');
+    }
+
+    // Get filename from Content-Disposition header if available
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = defaultFilename;
+    if (contentDisposition) {
+      const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+      if (matches != null && matches[1]) {
+        filename = matches[1].replace(/['"]/g, '');
+      }
+    }
+
+    const blob = await response.blob();
+    downloadExcelFile(blob, filename);
+  } catch (error: any) {
+    console.error(`Error generating report:`, error);
+    throw error;
+  }
+};
+
+// ==========================================
+// EMPLOYEE REPORTS
+// ==========================================
+
+/**
+ * Generate Employee Master Report
+ */
+export const generateEmployeeMasterReport = async (
+  filters: EmployeeMasterReportFilters
+): Promise<void> => {
+  return generateReport('employee-master', filters, 'Employee_Master_Report.xlsx');
+};
+
+/**
+ * Generate Inactive & Probation Report
+ */
+export const generateInactiveProbationReport = async (
+  filters: InactiveProbationReportFilters
+): Promise<void> => {
+  return generateReport('inactive-probation', filters, 'Inactive_Probation_Report.xlsx');
+};
+
+// ==========================================
+// ATTENDANCE REPORTS
+// ==========================================
+
+/**
+ * Generate Daily Attendance Report
+ */
+export const generateDailyAttendanceReport = async (
+  filters: DailyAttendanceReportFilters
+): Promise<void> => {
+  return generateReport('daily-attendance', filters, 'Daily_Attendance_Report.xlsx');
+};
+
+/**
+ * Generate Late & Early Departure Report
+ */
+export const generateLateEarlyReport = async (
+  filters: LateEarlyReportFilters
+): Promise<void> => {
+  return generateReport('late-early', filters, 'Late_Early_Report.xlsx');
+};
+
+/**
+ * Generate Overtime Report
+ */
+export const generateOvertimeReport = async (
+  filters: OvertimeReportFilters
+): Promise<void> => {
+  return generateReport('overtime', filters, 'Overtime_Report.xlsx');
+};
+
+// ==========================================
+// LEAVE REPORTS
+// ==========================================
+
+/**
+ * Generate Leave Balance Report
+ */
+export const generateLeaveBalanceReport = async (
+  filters: LeaveBalanceReportFilters
+): Promise<void> => {
+  return generateReport('leave-balance', filters, 'Leave_Balance_Report.xlsx');
+};
+
+/**
+ * Generate Leave Applications Report
+ */
+export const generateLeaveApplicationsReport = async (
+  filters: LeaveApplicationsReportFilters
+): Promise<void> => {
+  return generateReport('leave-applications', filters, 'Leave_Applications_Report.xlsx');
+};
+
+/**
+ * Generate Leave Encashment Report
+ */
+export const generateLeaveEncashmentReport = async (
+  filters: LeaveEncashmentReportFilters
+): Promise<void> => {
+  return generateReport('leave-encashment', filters, 'Leave_Encashment_Report.xlsx');
+};
+
+/**
+ * Generate Leave Ledger Report
+ */
+export const generateLeaveLedgerReport = async (
+  filters: LeaveLedgerReportFilters
+): Promise<void> => {
+  return generateReport('leave-ledger', filters, 'Leave_Ledger_Report.xlsx');
+};
+
+// ==========================================
+// FINANCIAL REPORTS
+// ==========================================
+
+/**
+ * Generate Loan Amortization Report
+ */
+export const generateLoanAmortizationReport = async (
+  filters: LoanAmortizationReportFilters
+): Promise<void> => {
+  return generateReport('loan-amortization', filters, 'Loan_Amortization_Report.xlsx');
+};
+
+/**
+ * Generate Expense Claim Report
+ */
+export const generateExpenseClaimReport = async (
+  filters: ExpenseClaimReportFilters
+): Promise<void> => {
+  return generateReport('expense-claims', filters, 'Expense_Claim_Report.xlsx');
+};
+
+// ==========================================
+// PERFORMANCE REPORTS
+// ==========================================
+
+/**
+ * Generate Appraisal Summary Report
+ */
+export const generateAppraisalSummaryReport = async (
+  filters: AppraisalSummaryReportFilters
+): Promise<void> => {
+  return generateReport('appraisal-summary', filters, 'Appraisal_Summary_Report.xlsx');
+};
+
+/**
+ * Generate Goal & KPI Report
+ */
+export const generateGoalKpiReport = async (
+  filters: GoalKpiReportFilters
+): Promise<void> => {
+  return generateReport('goal-kpi', filters, 'Goal_KPI_Report.xlsx');
+};
+
+// ==========================================
+// RECRUITMENT REPORTS
+// ==========================================
+
+/**
+ * Generate Job Applications Report
+ */
+export const generateJobApplicationsReport = async (
+  filters: JobApplicationsReportFilters
+): Promise<void> => {
+  return generateReport('job-applications', filters, 'Job_Applications_Report.xlsx');
+};
+
+// ==========================================
+// HR MANAGEMENT REPORTS
+// ==========================================
+
+/**
+ * Generate HR Cases Report
+ */
+export const generateHrCasesReport = async (
+  filters: HrCasesReportFilters
+): Promise<void> => {
+  return generateReport('hr-cases', filters, 'HR_Cases_Report.xlsx');
+};
+
+// ==========================================
+// CONFIGURATION REPORTS
+// ==========================================
+
+/**
+ * Generate Shift Configuration Report
+ */
+export const generateShiftConfigurationReport = async (
+  filters: ShiftConfigurationReportFilters
+): Promise<void> => {
+  return generateReport('shift-configuration', filters, 'Shift_Configuration_Report.xlsx');
+};
+
+/**
+ * Generate Work Week Configuration Report
+ */
+export const generateWorkWeekConfigurationReport = async (
+  filters: WorkWeekConfigurationReportFilters
+): Promise<void> => {
+  return generateReport('work-week-configuration', filters, 'Work_Week_Configuration_Report.xlsx');
+};
+
+// ==========================================
+// EXPORT ALL REPORT TYPES
+// ==========================================
+
+export type {
+  EmployeeMasterReportFilters,
+  InactiveProbationReportFilters,
+  DailyAttendanceReportFilters,
+  LateEarlyReportFilters,
+  OvertimeReportFilters,
+  LeaveBalanceReportFilters,
+  LeaveApplicationsReportFilters,
+  LeaveEncashmentReportFilters,
+  LeaveLedgerReportFilters,
+  LoanAmortizationReportFilters,
+  ExpenseClaimReportFilters,
+  AppraisalSummaryReportFilters,
+  GoalKpiReportFilters,
+  JobApplicationsReportFilters,
+  HrCasesReportFilters,
+  ShiftConfigurationReportFilters,
+  WorkWeekConfigurationReportFilters,
+  ReportApiResponse,
+};
