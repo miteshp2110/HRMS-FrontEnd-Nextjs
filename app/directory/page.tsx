@@ -1,6 +1,5 @@
 
 
-
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
@@ -21,27 +20,24 @@ export default function DirectoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [limit, setLimit] = useState(20)
-  const [inActive,setInactive] = useState(false)
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [showInactive, setShowInactive] = useState(false)
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   
-  // State for the immediate input value
   const [searchTerm, setSearchTerm] = useState("")
-  // State for the debounced search value that triggers API calls
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("")
 
   const canManageUsers = hasPermission("user.manage")
 
-  // Debounce effect for search input
   useEffect(() => {
     const handler = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-    }, 300); // 300ms delay
+      setDebouncedSearchTerm(searchTerm)
+    }, 300)
 
-    // Cleanup function to cancel the timeout if the user types again
     return () => {
-      clearTimeout(handler);
-    };
-  }, [searchTerm,inActive]);
+      clearTimeout(handler)
+    }
+  }, [searchTerm])
 
   const fetchUsers = useCallback(async () => {
     if (!canManageUsers) {
@@ -50,59 +46,89 @@ export default function DirectoryPage() {
     }
 
     setIsLoading(true)
+    setError(null)
+    
     try {
-      let result;
-      if (debouncedSearchTerm) {
-        // If there's a search term, call the search API
-        const searchResult = await searchUsers(debouncedSearchTerm,inActive);
-        // Adapt the search result to the PaginatedResponse structure for the table
+      let result
+
+      if (debouncedSearchTerm.trim()) {
+        console.log('🔍 Calling searchUsers:', { term: debouncedSearchTerm, showInactive })
+        const searchResult = await searchUsers(debouncedSearchTerm, showInactive)
+        
         result = {
-            success: true,
-            data: searchResult,
-            pagination: {
-                total_users: searchResult.length,
-                current_page: 1,
-                per_page: searchResult.length,
-                total_pages: 1,
-            }
-        };
+          success: true,
+          data: searchResult,
+          pagination: {
+            total_users: searchResult.length,
+            current_page: 1,
+            per_page: searchResult.length,
+            total_pages: 1,
+          }
+        }
       } else {
-        // Otherwise, fetch the paginated list
-        result = await getAllUserProfiles(currentPage, limit, "")
+        const status = showInactive ? "inactive" : "active"
+        console.log('🔍 Calling getAllUserProfiles:', { page: currentPage, limit, status })
+        
+        result = await getAllUserProfiles(currentPage, limit, "", status)
       }
+
+      console.log('✅ Fetched data:', { 
+        totalUsers: result.pagination.total_users, 
+        dataLength: result.data.length 
+      })
       setData(result)
-    } catch (error) {
-      console.error("Error fetching users:", error)
-      setData(null); // Clear data on error
+    } catch (error: any) {
+      console.error("❌ Error fetching users:", error)
+      setError(error.message || "Failed to fetch users. Please try again.")
+      // ✅ Set empty data instead of null to keep UI visible
+      setData({
+        success: false,
+        data: [],
+        pagination: {
+          total_users: 0,
+          current_page: 1,
+          per_page: limit,
+          total_pages: 0,
+        }
+      })
     } finally {
       setIsLoading(false)
     }
-  }, [canManageUsers, currentPage, limit, debouncedSearchTerm]);
+  }, [canManageUsers, currentPage, limit, debouncedSearchTerm, showInactive])
 
   useEffect(() => {
+    console.log('🔄 fetchUsers triggered by dependency change')
     fetchUsers()
   }, [fetchUsers])
 
   const handlePageChange = (page: number) => {
+    console.log('📄 Page changed to:', page)
     setCurrentPage(page)
   }
 
   const handleLimitChange = (newLimit: number) => {
+    console.log('📊 Limit changed to:', newLimit)
     setLimit(newLimit)
     setCurrentPage(1)
   }
 
-  // handleSearch now just updates the immediate search term
-  const handleSearch = (term: string,inActive:boolean) => {
+  const handleSearch = (term: string, inactive: boolean) => {
+    console.log('🔍 handleSearch called:', { term, inactive })
     setSearchTerm(term)
-    setInactive(inActive)
-    setCurrentPage(1) 
+    setShowInactive(inactive)
+    setCurrentPage(1)
   }
 
-  // Skeleton loading component
+  const handleUserCreated = () => {
+    fetchUsers()
+  }
+
+  const handleUploadSuccess = () => {
+    fetchUsers()
+  }
+
   const DirectorySkeleton = () => (
     <div className="space-y-6">
-      {/* Header skeleton */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="space-y-2">
           <Skeleton className="h-8 w-64" />
@@ -114,7 +140,6 @@ export default function DirectoryPage() {
         </div>
       </div>
 
-      {/* Search and filters skeleton */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex gap-2">
           <Skeleton className="h-10 w-64" />
@@ -123,9 +148,7 @@ export default function DirectoryPage() {
         <Skeleton className="h-10 w-24" />
       </div>
 
-      {/* Table skeleton */}
       <div className="rounded-md border">
-        {/* Table header */}
         <div className="border-b bg-muted/50 p-4">
           <div className="flex items-center space-x-4">
             <Skeleton className="h-4 w-4" />
@@ -138,7 +161,6 @@ export default function DirectoryPage() {
           </div>
         </div>
         
-        {/* Table rows */}
         {Array.from({ length: 8 }).map((_, index) => (
           <div key={index} className="border-b p-4 last:border-b-0">
             <div className="flex items-center space-x-4">
@@ -159,7 +181,6 @@ export default function DirectoryPage() {
         ))}
       </div>
 
-      {/* Pagination skeleton */}
       <div className="flex items-center justify-between">
         <Skeleton className="h-4 w-32" />
         <div className="flex items-center space-x-2">
@@ -179,14 +200,17 @@ export default function DirectoryPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Employee Directory</h1>
-            <p className="text-muted-foreground">Manage and view all employees in the organization.</p>
+            <p className="text-muted-foreground">
+              Manage and view all employees in the organization.
+            </p>
           </div>
 
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Access Denied</AlertTitle>
             <AlertDescription>
-              You don't have permission to access the employee directory. Contact your administrator for access.
+              You don't have permission to access the employee directory. 
+              Contact your administrator for access.
             </AlertDescription>
           </Alert>
         </div>
@@ -196,36 +220,55 @@ export default function DirectoryPage() {
 
   return (
     <MainLayout>
-      {isLoading ? (
-        <DirectorySkeleton />
-      ) : (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold">Employee Directory</h1>
-              <p className="text-muted-foreground">Manage and view all employees in the organization.</p>
-            </div>
-            <div>
-              <CreateUserDialog onUserCreated={fetchUsers} />
-              <Button onClick={()=>{setIsUploadDialogOpen(true)}} className="ml-5.5 mr-2"><Upload/>Upload</Button>
-            </div>
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Employee Directory</h1>
+            <p className="text-muted-foreground">
+              Manage and view all employees in the organization.
+            </p>
           </div>
-
-          {/* UserTable now receives the search term from the state */}
-          {data ? (
-            <UserTable
-              data={data}
-              onPageChange={handlePageChange}
-              onLimitChange={handleLimitChange}
-              onSearch={handleSearch}
-              isLoading={isLoading}
-            />
-          ) : (
-              !isLoading && <p>No users found or an error occurred.</p>
-          )}
+          <div className="flex gap-2">
+            <CreateUserDialog onUserCreated={handleUserCreated} />
+            <Button 
+              onClick={() => setIsUploadDialogOpen(true)} 
+              variant="outline"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Upload
+            </Button>
+          </div>
         </div>
-      )}
-      <BulkUploadDialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen} onUploadSuccess={fetchUsers} />
+
+        {error && !isLoading && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* ✅ ALWAYS render UserTable or skeleton - never conditionally hide */}
+        {isLoading ? (
+          <DirectorySkeleton />
+        ) : data ? (
+          <UserTable
+            data={data}
+            onPageChange={handlePageChange}
+            onLimitChange={handleLimitChange}
+            onSearch={handleSearch}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            showInactive={showInactive}
+          />
+        ) : null}
+      </div>
+
+      <BulkUploadDialog 
+        open={isUploadDialogOpen} 
+        onOpenChange={setIsUploadDialogOpen} 
+        onUploadSuccess={handleUploadSuccess} 
+      />
     </MainLayout>
   )
 }

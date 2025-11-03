@@ -562,11 +562,13 @@ export async function getHeadcountTrends(): Promise<
 export async function getAllUserProfiles(
   page = 1,
   limit = 20,
-  search = ""
+  search = "",
+  status=""
 ): Promise<PaginatedResponse<UserProfile>> {
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
+    status : status
   });
   if (search) params.append("search", search);
 
@@ -1000,6 +1002,11 @@ export async function updateExpenseStatus(
 export async function getUserSkills(userId: number): Promise<UserSkill[]> {
   return apiRequest<UserSkill[]>(
     API_CONFIG.ENDPOINTS.USER_SKILLS(userId.toString())
+  );
+}
+export async function getMyShift(): Promise<Shift> {
+  return apiRequest<Shift>(
+    `${API_CONFIG.ENDPOINTS.SHIFTS}/my`
   );
 }
 
