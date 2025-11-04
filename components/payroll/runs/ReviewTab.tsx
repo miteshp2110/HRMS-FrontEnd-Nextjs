@@ -58,7 +58,9 @@ import {
     Code,
     ArrowRight,
     Calendar,
-    Download
+    Download,
+    Info,
+    XCircle
 } from "lucide-react";
 import { ManualAdjustmentDialog } from "./ManualAdjustmentDialog";
 import { generateDetailedPayslipPDF } from "@/lib/payslipPdfGenerator";
@@ -1146,8 +1148,252 @@ const ManualAdjustmentBreakdown = ({ breakdown }: { breakdown: any }) => (
 );
 
 // Base Salary (Hours-based Prorated) Breakdown
+// const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
+//     <div className="space-y-4">
+//         <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
+//             <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+//                     <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+//                 </div>
+//                 <div>
+//                     <h4 className="font-semibold dark:text-foreground/90">Base Salary Structure</h4>
+//                     <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                         Monthly salary configuration
+//                     </p>
+//                 </div>
+//             </CardHeader>
+//             <CardContent className="space-y-1">
+//                 <InfoRow 
+//                     label="Monthly Amount" 
+//                     value={formatCurrency(breakdown.base_salary_structure?.monthly_amount || 0)} 
+//                     icon={<DollarSign className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="Calculation Type" 
+//                     value={breakdown.base_salary_structure?.calculation_type || "N/A"} 
+//                 />
+//                 <InfoRow 
+//                     label="Component ID" 
+//                     value={breakdown.base_salary_structure?.component_id} 
+//                 />
+//             </CardContent>
+//         </Card>
+
+//         <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
+//             <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+//                     <CalendarDays className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+//                 </div>
+//                 <div>
+//                     <h4 className="font-semibold dark:text-foreground/90">Period Details</h4>
+//                     <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                         Payroll cycle information
+//                     </p>
+//                 </div>
+//             </CardHeader>
+//             <CardContent className="space-y-1">
+//                 <InfoRow 
+//                     label="Start Date" 
+//                     value={formatDate(breakdown.period_details?.start_date)} 
+//                     icon={<Clock className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="End Date" 
+//                     value={formatDate(breakdown.period_details?.end_date)} 
+//                     icon={<Clock className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="Total Days in Period" 
+//                     value={breakdown.period_details?.total_days_in_period} 
+//                     icon={<Hash className="w-4 h-4" />}
+//                 />
+//             </CardContent>
+//         </Card>
+
+//         <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
+//             <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                 <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+//                     <Calculator className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+//                 </div>
+//                 <div>
+//                     <h4 className="font-semibold dark:text-foreground/90">Rate Calculations</h4>
+//                     <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                         Daily and hourly rate breakdown
+//                     </p>
+//                 </div>
+//             </CardHeader>
+//             <CardContent className="space-y-1">
+//                 <InfoRow 
+//                     label="Daily Rate" 
+//                     value={formatCurrency(breakdown.rate_calculations?.daily_rate || 0)} 
+//                     icon={<DollarSign className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="Daily Rate Formula" 
+//                     value={breakdown.rate_calculations?.daily_rate_formula} 
+//                     isCode 
+//                 />
+//                 <InfoRow 
+//                     label="Hourly Rate" 
+//                     value={formatCurrency(breakdown.rate_calculations?.hourly_rate || 0)} 
+//                     icon={<DollarSign className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="Hourly Rate Formula" 
+//                     value={breakdown.rate_calculations?.hourly_rate_formula} 
+//                     isCode 
+//                 />
+//             </CardContent>
+//         </Card>
+
+//         {breakdown.shift_details && (
+//             <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
+//                 <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                     <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+//                         <Clock className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+//                     </div>
+//                     <div>
+//                         <h4 className="font-semibold dark:text-foreground/90">Shift Details</h4>
+//                         <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                             Employee work schedule
+//                         </p>
+//                     </div>
+//                 </CardHeader>
+//                 <CardContent className="space-y-1">
+//                     <InfoRow 
+//                         label="Shift Name" 
+//                         value={breakdown.shift_details.shift_name} 
+//                     />
+//                     <InfoRow 
+//                         label="Scheduled Hours" 
+//                         value={`${breakdown.shift_details.scheduled_hours} hours/day`} 
+//                         icon={<Clock className="w-4 h-4" />}
+//                     />
+//                     <InfoRow 
+//                         label="From Time" 
+//                         value={formatTimeToTimezone(breakdown.shift_details.from_time)} 
+//                     />
+//                     <InfoRow 
+//                         label="To Time" 
+//                         value={formatTimeToTimezone(breakdown.shift_details.to_time)} 
+//                     />
+//                 </CardContent>
+//             </Card>
+//         )}
+
+//         {breakdown.attendance_analysis && (
+//             <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
+//                 <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                     <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+//                         <ListChecks className="w-5 h-5 text-green-600 dark:text-green-400" />
+//                     </div>
+//                     <div>
+//                         <h4 className="font-semibold dark:text-foreground/90">Attendance Analysis</h4>
+//                         <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                             Actual work hours and attendance
+//                         </p>
+//                     </div>
+//                 </CardHeader>
+//                 <CardContent className="space-y-1">
+//                     <InfoRow 
+//                         label="Total Regular Hours" 
+//                         value={`${breakdown.attendance_analysis.total_regular_hours} hrs`} 
+//                         icon={<Clock className="w-4 h-4" />}
+//                     />
+//                     <InfoRow 
+//                         label="Total Worked Hours" 
+//                         value={`${breakdown.attendance_analysis.total_worked_hours} hrs`} 
+//                         icon={<Clock className="w-4 h-4" />}
+//                     />
+//                     <InfoRow 
+//                         label="Days Worked" 
+//                         value={breakdown.attendance_analysis.days_worked} 
+//                     />
+//                     <InfoRow 
+//                         label="Present Days" 
+//                         value={breakdown.attendance_analysis.present_days} 
+//                         icon={<CheckCircle2 className="w-4 h-4 text-green-600" />}
+//                     />
+//                     <InfoRow 
+//                         label="Half Days" 
+//                         value={breakdown.attendance_analysis.half_days} 
+//                     />
+//                     <InfoRow 
+//                         label="Leave Days" 
+//                         value={breakdown.attendance_analysis.leave_days} 
+//                     />
+//                     <InfoRow 
+//                         label="Absent Days" 
+//                         value={breakdown.attendance_analysis.absent_days} 
+//                         icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
+//                     />
+//                 </CardContent>
+//             </Card>
+//         )}
+
+//         <Card className="border-border/40 dark:border-border/20 bg-gradient-to-br from-green-50/50 to-card dark:from-green-900/10 dark:to-card/50">
+//             <CardHeader className="flex-row items-center space-x-3 pb-3">
+//                 <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+//                     <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+//                 </div>
+//                 <div>
+//                     <h4 className="font-semibold dark:text-foreground/90">Final Calculation</h4>
+//                     <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+//                         Prorated salary amount
+//                     </p>
+//                 </div>
+//             </CardHeader>
+//             <CardContent className="space-y-1">
+//                 <InfoRow 
+//                     label="Formula" 
+//                     value={breakdown.final_calculation?.formula} 
+//                     isCode 
+//                 />
+//                 <InfoRow 
+//                     label="Regular Hours Worked" 
+//                     value={`${breakdown.final_calculation?.regular_hours_worked} hrs`} 
+//                     icon={<Clock className="w-4 h-4" />}
+//                 />
+//                 <InfoRow 
+//                     label="Computed Amount" 
+//                     value={formatCurrency(breakdown.final_calculation?.computed_amount || 0)} 
+//                     icon={<DollarSign className="w-4 h-4" />}
+//                 />
+//             </CardContent>
+//         </Card>
+//     </div>
+// );
+
 const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
     <div className="space-y-4">
+        {breakdown.source && (
+            <Card className="border-border/40 dark:border-border/20 bg-gradient-to-br from-purple-50/50 to-card dark:from-purple-900/10 dark:to-card/50">
+                <CardHeader className="flex-row items-center space-x-3 pb-3">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Info className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                        <h4 className="font-semibold dark:text-foreground/90">Calculation Source</h4>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+                            Data origin and method
+                        </p>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    <InfoRow 
+                        label="Source" 
+                        value={breakdown.source} 
+                    />
+                    {breakdown.calculation_method && (
+                        <InfoRow 
+                            label="Calculation Method" 
+                            value={breakdown.calculation_method} 
+                        />
+                    )}
+                </CardContent>
+            </Card>
+        )}
+
         <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
             <CardHeader className="flex-row items-center space-x-3 pb-3">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -1205,6 +1451,30 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                     value={breakdown.period_details?.total_days_in_period} 
                     icon={<Hash className="w-4 h-4" />}
                 />
+                {breakdown.period_details?.working_days_only !== undefined && (
+                    <InfoRow 
+                        label="Working Days Only" 
+                        value={breakdown.period_details.working_days_only} 
+                        icon={<CalendarDays className="w-4 h-4" />}
+                    />
+                )}
+                {breakdown.period_details?.excluded_days !== undefined && (
+                    <InfoRow 
+                        label="Excluded Days" 
+                        value={breakdown.period_details.excluded_days} 
+                        icon={<XCircle className="w-4 h-4 text-orange-600" />}
+                    />
+                )}
+                {breakdown.period_details?.excluded_days_note && (
+                    <div className="pt-2">
+                        <Alert className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                            <Info className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                            <AlertDescription className="text-xs">
+                                {breakdown.period_details.excluded_days_note}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
@@ -1303,6 +1573,13 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                         value={`${breakdown.attendance_analysis.total_worked_hours} hrs`} 
                         icon={<Clock className="w-4 h-4" />}
                     />
+                    {breakdown.attendance_analysis.leave_hours_paid !== undefined && (
+                        <InfoRow 
+                            label="Leave Hours Paid" 
+                            value={`${breakdown.attendance_analysis.leave_hours_paid} hrs`} 
+                            icon={<Clock className="w-4 h-4 text-blue-600" />}
+                        />
+                    )}
                     <InfoRow 
                         label="Days Worked" 
                         value={breakdown.attendance_analysis.days_worked} 
@@ -1325,6 +1602,16 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                         value={breakdown.attendance_analysis.absent_days} 
                         icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
                     />
+                    {breakdown.attendance_analysis.leave_hours_note && (
+                        <div className="pt-2">
+                            <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <AlertDescription className="text-xs">
+                                    {breakdown.attendance_analysis.leave_hours_note}
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         )}
@@ -1357,10 +1644,21 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                     value={formatCurrency(breakdown.final_calculation?.computed_amount || 0)} 
                     icon={<DollarSign className="w-4 h-4" />}
                 />
+                {breakdown.final_calculation?.note && (
+                    <div className="pt-2">
+                        <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                            <Info className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <AlertDescription className="text-xs">
+                                {breakdown.final_calculation.note}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                )}
             </CardContent>
         </Card>
     </div>
 );
+
 
 // Percentage Based Breakdown
 const PercentageBreakdown = ({ breakdown }: { breakdown: any }) => (

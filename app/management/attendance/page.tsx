@@ -80,6 +80,8 @@ import {
   Loader2,
   HistoryIcon,
   Upload,
+  Download,
+  DownloadIcon,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -111,6 +113,7 @@ import { BulkAttendanceDialog } from "@/components/management/bulk-attendance-di
 import { AttendanceAuditDialog } from "@/components/management/attendance-audit-dialog";
 import { isObject } from "framer-motion";
 import { BulkUploadAttendanceDialog } from "@/components/management/bulk-attendace-upload";
+import { exportAttendanceToExcel } from "@/lib/exportAttendanceToExcel";
 
 function formatUtcTimeToZone(timeString: string | undefined, timeZone: string) {
   if (timeString !== undefined) {
@@ -927,186 +930,6 @@ const PunchOutDialog = ({
   );
 };
 
-// ============================ Edit Attendance Dialog ============================
-// const EditAttendanceDialog = ({
-//   open,
-//   onOpenChange,
-//   record,
-//   onSuccess,
-// }: {
-//   open: boolean
-//   onOpenChange: (open: boolean) => void
-//   record: AttendanceRecord | null
-//   onSuccess: () => void
-// }) => {
-//   const { toast } = useToast()
-//   const [formData, setFormData] = useState({
-//     punch_in: "",
-//     punch_out: "",
-//     attendance_status: "Present",
-//     notes: "",
-//   })
-//   const [loading, setLoading] = useState(false)
-
-//   useEffect(() => {
-//     if (record) {
-
-//       const formatForInput = (isoString: string | null) => {
-//         if (!isoString) return ""
-//         try {
-
-//           return DateTime.fromISO(isoString).toFormat("yyyy-MM-dd'T'HH:mm")
-//         } catch (error) {
-//           console.error("Error formatting date for input:", error)
-//           return ""
-//         }
-//       }
-
-//       setFormData({
-//         punch_in: formatForInput(record.punch_in),
-//         punch_out: formatForInput(record.punch_out),
-//         attendance_status: record.attendance_status,
-//         notes: "",
-//       })
-//     }
-//   }, [record])
-
-//   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-//   const { id, value } = e.target;
-
-//   setFormData((prev) => {
-//     // if this is a time input and the previous value contains a date (e.g. "2025-12-01T09:30")
-//     if ((id === "punch_in" || id === "punch_out") && prev[id]?.includes("T")) {
-//       const datePart = prev[id].split("T")[0]; // "2025-12-01"
-//       return { ...prev, [id]: `${datePart}T${value}` }; // preserve full datetime
-//     }
-
-//     // otherwise, just update normally
-//     return { ...prev, [id]: value };
-//   });
-// };
-
-//   const handleStatusChange = (value: string) => {
-//     setFormData((prev) => ({ ...prev, attendance_status: value }))
-//   }
-
-//   const handleSubmit = async (e: React.FormEvent) => {
-//     e.preventDefault()
-//     if (!record) return
-//     setLoading(true)
-
-//     try {
-
-//       await updateAttendanceRecord(record.id, {
-//         punch_in: formData.punch_in,
-//         punch_out: formData.punch_out,
-//         attendance_status: formData.attendance_status,
-//         update_reason: formData.notes,
-//         timezone: localStorage.getItem("selectedTimezone") ?? "UTC",
-//       })
-
-//       toast({
-//         title: "Success",
-//         description: "Attendance record updated successfully.",
-//       })
-//       onSuccess()
-//       onOpenChange(false)
-//     } catch (error: any) {
-//       toast({
-//         title: "Error",
-//         description: `Failed to update record: ${error.message}`,
-//         variant: "destructive",
-//       })
-//     } finally {
-//       setLoading(false)
-//     }
-//   }
-
-//   if (!record) return null
-
-//   return (
-//     <Dialog open={open} onOpenChange={onOpenChange}>
-//       <DialogContent>
-//         <DialogHeader>
-//           <DialogTitle>Edit Attendance Record</DialogTitle>
-//           <DialogDescription>
-//             Modify details for {record.first_name} {record.last_name} on{" "}
-//             {new Date(record.attendance_date).toLocaleDateString()}.
-//           </DialogDescription>
-//         </DialogHeader>
-//         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-//           <div className="space-y-2">
-//             <Label htmlFor="attendance_status">Attendance Status</Label>
-//             <Select value={formData.attendance_status} onValueChange={handleStatusChange}>
-//               <SelectTrigger id="attendance_status">
-//                 <SelectValue placeholder="Select status" />
-//               </SelectTrigger>
-//               <SelectContent>
-//                 <SelectItem value="Present">Present</SelectItem>
-//                 <SelectItem value="Absent">Absent</SelectItem>
-//                 <SelectItem value="Leave">Leave</SelectItem>
-//               </SelectContent>
-//             </Select>
-//           </div>
-
-//           <div className="grid grid-cols-2 gap-4">
-//             <div className="space-y-2">
-//               <Label htmlFor="punch_in">Punch In</Label>
-//               <Input
-//                 disabled={formData.attendance_status !== "Present"}
-//                 id="punch_in"
-//                 type="time"
-//                 defaultValue={
-//                   formatUtcTimeToZone(record.punch_in!, localStorage.getItem("selectedTimezone") ?? "Utc") ?? ""
-//                 }
-//                 onChange={handleChange}
-//               />
-//             </div>
-//             <div className="space-y-2">
-//               <Label htmlFor="punch_out">Punch Out</Label>
-//               <Input
-//                 disabled={formData.attendance_status !== "Present"}
-//                 id="punch_out"
-//                 type="time"
-//                 defaultValue={
-//                   formatUtcTimeToZone(record.punch_out!, localStorage.getItem("selectedTimezone") ?? "Utc") ?? ""
-//                 }
-//                 onChange={handleChange}
-//               />
-//             </div>
-//           </div>
-
-//           <div className="space-y-2">
-//             <Label htmlFor="notes">Reason for Change (Notes)</Label>
-//             <Textarea
-//               id="notes"
-//               placeholder="e.g., Correcting manual entry error."
-//               value={formData.notes}
-//               onChange={handleChange}
-//             />
-//           </div>
-
-//           <DialogFooter>
-//             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-//               Cancel
-//             </Button>
-//             <Button type="submit" disabled={loading} aria-busy={loading}>
-//               {loading ? (
-//                 <>
-//                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-//                   Saving...
-//                 </>
-//               ) : (
-//                 "Save Changes"
-//               )}
-//             </Button>
-//           </DialogFooter>
-//         </form>
-//       </DialogContent>
-//     </Dialog>
-//   )
-// }
-
 const EditAttendanceDialog = ({
   open,
   onOpenChange,
@@ -1138,7 +961,7 @@ const EditAttendanceDialog = ({
         if (!isoString) return "";
         try {
           return DateTime.fromISO(isoString, { zone: "utc" }) // interpret stored value as UTC
-            .setZone(localStorage.getItem('selectedTimezone')??'UTC') // convert to target timezone
+            .setZone(localStorage.getItem("selectedTimezone") ?? "UTC") // convert to target timezone
             .toFormat("yyyy-MM-dd'T'HH:mm");
         } catch (error) {
           console.error("Error formatting date for input:", error);
@@ -1347,7 +1170,6 @@ const EditAttendanceDialog = ({
   );
 };
 
-
 // ============================= Page =============================
 export default function AttendanceRecordsPage() {
   const { hasPermission } = useAuth();
@@ -1378,7 +1200,7 @@ export default function AttendanceRecordsPage() {
   );
   const [holidays, setHolidays] = useState<Map<any, any>>();
   const [isBulkAttendanceOpen, setIsBulkAttendanceOpen] = useState(false);
-  const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const [apiFilters, setApiFilters] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -1413,9 +1235,17 @@ export default function AttendanceRecordsPage() {
     setHolidays(holidayMap);
   };
 
-  const onUploadSuccess = ()=>{
-    setUploadDialogOpen(false)
-    fetchRecords()
+  const onUploadSuccess = () => {
+    setUploadDialogOpen(false);
+    fetchRecords();
+  };
+
+  const handleExportExcel = () =>{
+    toast({
+      title:"Started Download",
+      description:"Exporting data to excel"
+    })
+    exportAttendanceToExcel(allRecords,selectedTimezone??'UTC','AttendanceRecord')
   }
 
   useEffect(() => {
@@ -2062,11 +1892,8 @@ export default function AttendanceRecordsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="default"
-              onClick={() => setUploadDialogOpen(true)}
-            >
-              <Upload/>
+            <Button variant="default" onClick={() => setUploadDialogOpen(true)}>
+              <Upload />
             </Button>
             <Button
               variant="secondary"
@@ -2154,10 +1981,14 @@ export default function AttendanceRecordsPage() {
             {/* Filters */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <HistoryIcon className="h-5 w-5" />
-                  Filters
+                <CardTitle className="flex justify-between items-center px-3 py-2 rounded-md">
+                  <div className="flex items-center gap-2">
+                    <HistoryIcon className="h-5 w-5" />
+                    <span>Filters</span>
+                  </div>
+                  <Button variant={'default'} onClick={handleExportExcel}><DownloadIcon className="h-5 w-5" /></Button>
                 </CardTitle>
+
                 <CardDescription>
                   Apply filters to fetch records from the server.
                 </CardDescription>
@@ -2442,13 +2273,14 @@ export default function AttendanceRecordsPage() {
               filters={apiFilters}
             />
             <BulkUploadAttendanceDialog
-        open={uploadDialogOpen}
-        onOpenChange={setUploadDialogOpen}
-        timezone={localStorage.getItem("selectedTimezone")??"UTC"}
-        onSuccess={()=>{setUploadDialogOpen(false)
-          fetchRecords()
-        }}
-      />
+              open={uploadDialogOpen}
+              onOpenChange={setUploadDialogOpen}
+              timezone={localStorage.getItem("selectedTimezone") ?? "UTC"}
+              onSuccess={() => {
+                setUploadDialogOpen(false);
+                fetchRecords();
+              }}
+            />
           </>
         )}
       </div>

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { ShiftDetailsWidget } from "./user/shift-detail-widget"
 
 // Skeleton Components
 function WelcomeWidgetSkeleton() {
@@ -191,6 +192,7 @@ export function UserDashboardPage() {
 
       {/* Shortcuts and Attendance Widgets */}
       <ShortcutsWidget />
+      <ShiftDetailsWidget/>
       <MonthlyAttendanceWidget monthlyAttendance={data.monthlyAttendance} />
 
       {/* Below top row, grid layout in 2 columns on md+ for other widgets */}
