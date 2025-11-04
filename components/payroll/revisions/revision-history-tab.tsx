@@ -519,7 +519,7 @@ export function RevisionHistoryTab({ employeeId }: RevisionHistoryTabProps) {
       </CardContent>
 
       {/* Edit Dialog - Full Editing Capability */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+      {/* <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -709,7 +709,221 @@ export function RevisionHistoryTab({ employeeId }: RevisionHistoryTabProps) {
             </DialogFooter>
           </form>
         </DialogContent>
-      </Dialog>
+      </Dialog> */}
+
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-2">
+        <Edit className="h-5 w-5" />
+        Edit Scheduled Revision
+      </DialogTitle>
+      <DialogDescription>
+        Modify all aspects of the scheduled salary revision. You can change calculation types, values, and more.
+      </DialogDescription>
+    </DialogHeader>
+    <form onSubmit={handleEditSubmit} className="space-y-6 py-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Component</Label>
+          <Select
+            value={String(editFormData.component_id || '')}
+            onValueChange={(v) => {
+              const componentId = Number(v);
+              setEditFormData({ 
+                ...editFormData, 
+                component_id: componentId,
+                // Force Fixed calculation type if component id is 1
+                new_calculation_type: componentId === 1 ? 'Fixed' : editFormData.new_calculation_type
+              });
+              // Clear formula if component id is 1
+              if (componentId === 1) {
+                setFormula([]);
+              }
+            }}
+            disabled={isUpdating}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {components.map(c => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <Label>Effective Date</Label>
+          <Input
+            type="date"
+            value={editFormData.effective_date || ''}
+            onChange={(e) => setEditFormData({ ...editFormData, effective_date: e.target.value })}
+            min={new Date().toISOString().split('T')[0]}
+            disabled={isUpdating}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Calculation Type</Label>
+        <Select
+          value={editFormData.new_calculation_type}
+          onValueChange={(v: any) => {
+            setEditFormData({ ...editFormData, new_calculation_type: v })
+            if (v !== 'Formula') setFormula([])
+          }}
+          disabled={isUpdating || editFormData.component_id === 1}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Fixed">Fixed Amount</SelectItem>
+            {editFormData.component_id !== 1 && (
+              <>
+                <SelectItem value="Percentage">Percentage</SelectItem>
+                <SelectItem value="Formula">Custom Formula</SelectItem>
+              </>
+            )}
+          </SelectContent>
+        </Select>
+        {editFormData.component_id === 1 && (
+          <p className="text-xs text-muted-foreground">
+            This component only supports fixed amount calculation
+          </p>
+        )}
+      </div>
+
+      {editFormData.new_calculation_type === 'Fixed' && (
+        <div className="space-y-2">
+          <Label>New Amount (AED)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={editFormData.new_value || 0}
+            onChange={(e) => setEditFormData({ ...editFormData, new_value: Number(e.target.value) })}
+            disabled={isUpdating}
+            required
+          />
+        </div>
+      )}
+
+      {editFormData.new_calculation_type === 'Percentage' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Percentage (%)</Label>
+            <Input
+              type="number"
+              step="0.01"
+              value={editFormData.new_value || 0}
+              onChange={(e) => setEditFormData({ ...editFormData, new_value: Number(e.target.value) })}
+              disabled={isUpdating}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Based On Component</Label>
+            <Select
+              value={String(editFormData.new_based_on_component_id || '')}
+              onValueChange={(v) => setEditFormData({ ...editFormData, new_based_on_component_id: Number(v) })}
+              disabled={isUpdating}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select base..." />
+              </SelectTrigger>
+              <SelectContent>
+                {structure.filter(s => s.component_type === 'earning').map(c => (
+                  <SelectItem key={c.component_id} value={String(c.component_id)}>
+                    {c.component_name} ({formatAED(c.calculated_amount)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      {editFormData.new_calculation_type === 'Formula' && (
+        <div className="space-y-4">
+          <div>
+            <Label className="mb-2 block">Formula Builder</Label>
+            <FormulaBuilder
+              formula={formula}
+              setFormula={setFormula}
+              components={components}
+              existingStructure={structure}
+            />
+          </div>
+          {formula.length > 0 && (
+            <div className="p-3 bg-muted rounded-md">
+              <div className="text-xs text-muted-foreground mb-1">Formula Preview:</div>
+              <div className="font-mono text-sm">
+                {renderFormula(formula)}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label>Reason</Label>
+        <Textarea
+          value={editFormData.reason || ''}
+          onChange={(e) => setEditFormData({ ...editFormData, reason: e.target.value })}
+          rows={3}
+          disabled={isUpdating}
+          required
+        />
+      </div>
+
+      <Card className="bg-gradient-to-r from-slate-50 to-gray-50 border-gray-200 dark:from-slate-900 dark:to-gray-900">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Real-time Preview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Estimated Amount:</span>
+            <span className="text-xl font-bold text-indigo-600 dark:text-indigo-400">
+              {formatAED(realTimePreview)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setIsEditDialogOpen(false)
+            setFormula([])
+          }}
+          disabled={isUpdating}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isUpdating}>
+          {isUpdating ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Updating...
+            </>
+          ) : (
+            'Update Revision'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+</Dialog>
+
     </Card>
   )
 }

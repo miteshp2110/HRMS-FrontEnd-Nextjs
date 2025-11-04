@@ -36,7 +36,8 @@ import {
     ArrowRight,
     AlertTriangle,
     CheckCircle2,
-    Edit
+    Edit,
+    XCircle
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getEmployeePayslipForCycle, getMyPayslipForCycle, getPayrollComponents, type PayslipDetails } from "@/lib/api";
@@ -771,6 +772,34 @@ const ManualAdjustmentBreakdown = ({ breakdown }: { breakdown: any }) => (
 
 const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
     <div className="space-y-4">
+        {breakdown.source && (
+            <Card className="border-border/40 dark:border-border/20 bg-gradient-to-br from-purple-50/50 to-card dark:from-purple-900/10 dark:to-card/50">
+                <CardHeader className="flex-row items-center space-x-3 pb-3">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Info className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                        <h4 className="font-semibold dark:text-foreground/90">Calculation Source</h4>
+                        <p className="text-xs text-muted-foreground dark:text-muted-foreground/70">
+                            Data origin and method
+                        </p>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                    <InfoRow 
+                        label="Source" 
+                        value={breakdown.source} 
+                    />
+                    {breakdown.calculation_method && (
+                        <InfoRow 
+                            label="Calculation Method" 
+                            value={breakdown.calculation_method} 
+                        />
+                    )}
+                </CardContent>
+            </Card>
+        )}
+
         <Card className="border-border/40 dark:border-border/20 bg-card dark:bg-card/50">
             <CardHeader className="flex-row items-center space-x-3 pb-3">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -828,6 +857,30 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                     value={breakdown.period_details?.total_days_in_period} 
                     icon={<Hash className="w-4 h-4" />}
                 />
+                {breakdown.period_details?.working_days_only !== undefined && (
+                    <InfoRow 
+                        label="Working Days Only" 
+                        value={breakdown.period_details.working_days_only} 
+                        icon={<CalendarDays className="w-4 h-4" />}
+                    />
+                )}
+                {breakdown.period_details?.excluded_days !== undefined && (
+                    <InfoRow 
+                        label="Excluded Days" 
+                        value={breakdown.period_details.excluded_days} 
+                        icon={<XCircle className="w-4 h-4 text-orange-600" />}
+                    />
+                )}
+                {breakdown.period_details?.excluded_days_note && (
+                    <div className="pt-2">
+                        <Alert className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800">
+                            <Info className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                            <AlertDescription className="text-xs">
+                                {breakdown.period_details.excluded_days_note}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
@@ -926,6 +979,13 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                         value={`${breakdown.attendance_analysis.total_worked_hours} hrs`} 
                         icon={<Clock className="w-4 h-4" />}
                     />
+                    {breakdown.attendance_analysis.leave_hours_paid !== undefined && (
+                        <InfoRow 
+                            label="Leave Hours Paid" 
+                            value={`${breakdown.attendance_analysis.leave_hours_paid} hrs`} 
+                            icon={<Clock className="w-4 h-4 text-blue-600" />}
+                        />
+                    )}
                     <InfoRow 
                         label="Days Worked" 
                         value={breakdown.attendance_analysis.days_worked} 
@@ -948,6 +1008,16 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                         value={breakdown.attendance_analysis.absent_days} 
                         icon={<AlertTriangle className="w-4 h-4 text-red-600" />}
                     />
+                    {breakdown.attendance_analysis.leave_hours_note && (
+                        <div className="pt-2">
+                            <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                                <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <AlertDescription className="text-xs">
+                                    {breakdown.attendance_analysis.leave_hours_note}
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         )}
@@ -980,6 +1050,16 @@ const BaseSalaryBreakdown = ({ breakdown }: { breakdown: any }) => (
                     value={formatCurrency(breakdown.final_calculation?.computed_amount || 0)} 
                     icon={<DollarSign className="w-4 h-4" />}
                 />
+                {breakdown.final_calculation?.note && (
+                    <div className="pt-2">
+                        <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                            <Info className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <AlertDescription className="text-xs">
+                                {breakdown.final_calculation.note}
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                )}
             </CardContent>
         </Card>
     </div>
