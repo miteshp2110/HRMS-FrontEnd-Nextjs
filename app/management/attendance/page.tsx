@@ -620,6 +620,197 @@ const OvertimeProcessDialog = ({
 };
 
 // ============================= Punch In Dialog =============================
+// const PunchInDialog = ({
+//   open,
+//   onOpenChange,
+//   onPunchInSuccess,
+// }: {
+//   open: boolean;
+//   onOpenChange: (open: boolean) => void;
+//   onPunchInSuccess: () => void;
+// }) => {
+//   const { toast } = useToast();
+//   const [employeeSearch, setEmployeeSearch] = useState("");
+//   const [debouncedEmployeeSearch, setDebouncedEmployeeSearch] = useState("");
+//   const [searchedUsers, setSearchedUsers] = useState<UserProfile[]>([]);
+//   const [isSearching, setIsSearching] = useState(false);
+//   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+//   const [isEmployeePopoverOpen, setIsEmployeePopoverOpen] = useState(false);
+//   const [selectedTimezone, setSelectedTimezone] = useState("Asia/Kolkata");
+//   const [punchInTime, setPunchInTime] = useState(() => {
+//     const now = new Date();
+//     return now.toTimeString().slice(0, 8);
+//   });
+//   const [punchInDate, setPunchInDate] = useState<string>();
+//   const [submitting, setSubmitting] = useState(false); // button loader
+
+//   useEffect(() => {
+//     const handler = setTimeout(
+//       () => setDebouncedEmployeeSearch(employeeSearch),
+//       500
+//     );
+//     return () => clearTimeout(handler);
+//   }, [employeeSearch]);
+
+//   useEffect(() => {
+//     if (debouncedEmployeeSearch) {
+//       setIsSearching(true);
+//       searchUsers(debouncedEmployeeSearch)
+//         .then(setSearchedUsers)
+//         .finally(() => setIsSearching(false));
+//     } else {
+//       setSearchedUsers([]);
+//     }
+//   }, [debouncedEmployeeSearch]);
+
+//   const handlePunchIn = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!selectedUser) {
+//       toast({
+//         title: "Error",
+//         description: "Please select an employee.",
+//         variant: "destructive",
+//       });
+//       return;
+//     }
+
+//     try {
+//       setSubmitting(true);
+//       const timeLocal = `${punchInDate} ${punchInTime}`;
+//       await punchIn(
+//         timeLocal,
+//         localStorage.getItem("selectedTimezone") ?? "UTC",
+//         selectedUser.id
+//       );
+
+//       toast({
+//         title: "Success",
+//         description: `${selectedUser.first_name} ${selectedUser.last_name} has been punched in successfully.`,
+//       });
+//       onOpenChange(false);
+//       onPunchInSuccess();
+
+//       setSelectedUser(null);
+//       setEmployeeSearch("");
+//       setPunchInTime(new Date().toTimeString().slice(0, 8));
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: `Failed to punch in: ${error.message}`,
+//         variant: "destructive",
+//       });
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   return (
+//     <Dialog open={open} onOpenChange={onOpenChange}>
+//       <DialogContent>
+//         <DialogHeader>
+//           <DialogTitle>Punch In Employee</DialogTitle>
+//           <DialogDescription>
+//             Record punch-in time for an employee.
+//           </DialogDescription>
+//         </DialogHeader>
+//         <form onSubmit={handlePunchIn} className="space-y-4 py-4">
+//           <div className="space-y-2">
+//             <Label>Employee</Label>
+//             <Popover
+//               open={isEmployeePopoverOpen}
+//               onOpenChange={setIsEmployeePopoverOpen}
+//             >
+//               <PopoverTrigger asChild>
+//                 <button
+//                   type="button"
+//                   className="w-full flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+//                 >
+//                   {selectedUser
+//                     ? `${selectedUser.first_name} ${selectedUser.last_name}`
+//                     : "Select employee..."}
+//                   <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+//                 </button>
+//               </PopoverTrigger>
+//               <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+//                 <Command>
+//                   <CommandInput
+//                     placeholder="Search employee..."
+//                     onValueChange={setEmployeeSearch}
+//                   />
+//                   <CommandList>
+//                     <CommandEmpty>
+//                       {isSearching ? "Searching..." : "No employee found."}
+//                     </CommandEmpty>
+//                     <CommandGroup>
+//                       {searchedUsers.map((user) => (
+//                         <CommandItem
+//                           key={user.id}
+//                           value={`${user.first_name} ${user.last_name}`}
+//                           onSelect={() => {
+//                             setSelectedUser(user);
+//                             setIsEmployeePopoverOpen(false);
+//                           }}
+//                         >
+//                           {user.first_name} {user.last_name}
+//                         </CommandItem>
+//                       ))}
+//                     </CommandGroup>
+//                   </CommandList>
+//                 </Command>
+//               </PopoverContent>
+//             </Popover>
+//           </div>
+
+//           <div className="space-y-2">
+//             <Label>Date</Label>
+//             <Input
+//               type="date"
+//               value={punchInDate}
+//               onChange={(e) => setPunchInDate(e.target.value)}
+//               required
+//             />
+//           </div>
+
+//           <div className="space-y-2">
+//             <Label>Punch In Time</Label>
+//             <Input
+//               type="time"
+//               step="1"
+//               value={punchInTime}
+//               onChange={(e) => setPunchInTime(e.target.value)}
+//               required
+//             />
+//           </div>
+
+//           <DialogFooter>
+//             <Button
+//               type="button"
+//               variant="outline"
+//               onClick={() => onOpenChange(false)}
+//               disabled={submitting}
+//             >
+//               Cancel
+//             </Button>
+//             <Button type="submit" disabled={submitting} aria-busy={submitting}>
+//               {submitting ? (
+//                 <>
+//                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                   Punching In...
+//                 </>
+//               ) : (
+//                 <>
+//                   <Plus className="h-4 w-4 mr-2" />
+//                   Punch In
+//                 </>
+//               )}
+//             </Button>
+//           </DialogFooter>
+//         </form>
+//       </DialogContent>
+//     </Dialog>
+//   );
+// };
+
 const PunchInDialog = ({
   open,
   onOpenChange,
@@ -715,6 +906,22 @@ const PunchInDialog = ({
         </DialogHeader>
         <form onSubmit={handlePunchIn} className="space-y-4 py-4">
           <div className="space-y-2">
+            <div className="space-y-2">
+              <Label>Timezone</Label>
+              <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground">
+                <span className="truncate">{selectedTimezone}</span>
+                <button
+                  type="button"
+                  className="text-xs text-foreground/70 hover:text-foreground"
+                  onClick={() => {
+                    // No timezone change logic here; UI is only displaying the current value.
+                    // If you want to allow changing timezone, implement a picker here
+                  }}
+                >
+                  Current
+                </button>
+              </div>
+            </div>
             <Label>Employee</Label>
             <Popover
               open={isEmployeePopoverOpen}
@@ -812,6 +1019,123 @@ const PunchInDialog = ({
 };
 
 // ============================ Punch Out Dialog ============================
+// const PunchOutDialog = ({
+//   open,
+//   onOpenChange,
+//   record,
+//   onPunchOutSuccess,
+// }: {
+//   open: boolean;
+//   onOpenChange: (open: boolean) => void;
+//   record: AttendanceRecord | null;
+//   onPunchOutSuccess: () => void;
+// }) => {
+//   const { toast } = useToast();
+//   const [selectedTimezone, setSelectedTimezone] = useState("Asia/Kolkata");
+//   const [punchOutDate, setPunchOutDate] = useState<string>(
+//     record ? new Date(record?.attendance_date!).toISOString().split("T")[0] : ""
+//   );
+//   const [punchOutTime, setPunchOutTime] = useState(() => {
+//     const now = new Date();
+//     return now.toTimeString().slice(0, 8);
+//   });
+//   const [submitting, setSubmitting] = useState(false); // button loader
+
+//   const handlePunchOut = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!record) return;
+
+//     try {
+//       setSubmitting(true);
+//       const timeLocal = `${punchOutDate} ${punchOutTime}`;
+//       await punchOut(
+//         timeLocal,
+//         localStorage.getItem("selectedTimezone") ?? "UTC",
+//         record.employee_id
+//       );
+//       toast({
+//         title: "Success",
+//         description: `${record.first_name} ${record.last_name} has been punched out successfully.`,
+//       });
+//       onOpenChange(false);
+//       onPunchOutSuccess();
+
+//       setPunchOutTime(new Date().toTimeString().slice(0, 8));
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: `Failed to punch out: ${error.message}`,
+//         variant: "destructive",
+//       });
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   return (
+//     <Dialog open={open} onOpenChange={onOpenChange}>
+//       <DialogContent>
+//         <DialogHeader>
+//           <DialogTitle>Punch Out Employee</DialogTitle>
+//           <DialogDescription>
+//             Record punch-out time for {record?.first_name} {record?.last_name}{" "}
+//             on{" "}
+//             {record
+//               ? new Date(record.attendance_date).toLocaleDateString()
+//               : ""}
+//           </DialogDescription>
+//         </DialogHeader>
+//         <form onSubmit={handlePunchOut} className="space-y-4 py-4">
+//           <div className="space-y-2">
+//             <Label>Date</Label>
+//             <Input
+//               type="date"
+//               value={punchOutDate}
+//               onChange={(e) => setPunchOutDate(e.target.value)}
+//               required
+//             />
+//           </div>
+
+//           <div className="space-y-2">
+//             <Label>Punch Out Time</Label>
+//             <Input
+//               type="time"
+//               step="1"
+//               value={punchOutTime}
+//               onChange={(e) => setPunchOutTime(e.target.value)}
+//               required
+//             />
+//           </div>
+
+//           <DialogFooter>
+//             <Button
+//               type="button"
+//               variant="outline"
+//               onClick={() => onOpenChange(false)}
+//               disabled={submitting}
+//             >
+//               Cancel
+//             </Button>
+//             <Button type="submit" disabled={submitting} aria-busy={submitting}>
+//               {submitting ? (
+//                 <>
+//                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                   Punching Out...
+//                 </>
+//               ) : (
+//                 <>
+//                   <LogOut className="h-4 w-4 mr-2" />
+//                   Punch Out
+//                 </>
+//               )}
+//             </Button>
+//           </DialogFooter>
+//         </form>
+//       </DialogContent>
+//     </Dialog>
+//   );
+// };
+
 const PunchOutDialog = ({
   open,
   onOpenChange,
@@ -833,6 +1157,16 @@ const PunchOutDialog = ({
     return now.toTimeString().slice(0, 8);
   });
   const [submitting, setSubmitting] = useState(false); // button loader
+
+  useEffect(() => {
+    // If record changes (e.g., dialog opened with different record), reset date
+    if (record?.attendance_date) {
+      const dateOnly = new Date(record.attendance_date)
+        .toISOString()
+        .split("T")[0];
+      setPunchOutDate(dateOnly);
+    }
+  }, [record?.attendance_date]);
 
   const handlePunchOut = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -880,6 +1214,22 @@ const PunchOutDialog = ({
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handlePunchOut} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Timezone</Label>
+            <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground">
+              <span className="truncate">{selectedTimezone}</span>
+              <button
+                type="button"
+                className="text-xs text-foreground/70 hover:text-foreground"
+                onClick={() => {
+                  // Display-only: keep as is. If needed, implement a picker here.
+                }}
+              >
+                Current
+              </button>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label>Date</Label>
             <Input
@@ -954,6 +1304,7 @@ const EditAttendanceDialog = ({
     attendance_status: "Present",
   });
   const [loading, setLoading] = useState(false);
+  const tz = localStorage.getItem('selectedTimezone')??'UTC'
 
   useEffect(() => {
     if (record) {
@@ -1090,6 +1441,21 @@ const EditAttendanceDialog = ({
             {new Date(record.attendance_date).toLocaleDateString()}.
           </DialogDescription>
         </DialogHeader>
+        <div className="space-y-2">
+          <Label>Timezone</Label>
+          <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground">
+            <span className="truncate">{tz}</span>
+            <button
+              type="button"
+              className="text-xs text-foreground/70 hover:text-foreground"
+              onClick={() => {
+                // Display-only: keep as is. If needed, implement a picker here.
+              }}
+            >
+              Current
+            </button>
+          </div>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="attendance_status">Attendance Status</Label>
@@ -1240,13 +1606,17 @@ export default function AttendanceRecordsPage() {
     fetchRecords();
   };
 
-  const handleExportExcel = () =>{
+  const handleExportExcel = () => {
     toast({
-      title:"Started Download",
-      description:"Exporting data to excel"
-    })
-    exportAttendanceToExcel(allRecords,selectedTimezone??'UTC','AttendanceRecord')
-  }
+      title: "Started Download",
+      description: "Exporting data to excel",
+    });
+    exportAttendanceToExcel(
+      allRecords,
+      selectedTimezone ?? "UTC",
+      "AttendanceRecord"
+    );
+  };
 
   useEffect(() => {
     const handler = setTimeout(
@@ -1986,7 +2356,9 @@ export default function AttendanceRecordsPage() {
                     <HistoryIcon className="h-5 w-5" />
                     <span>Filters</span>
                   </div>
-                  <Button variant={'default'} onClick={handleExportExcel}><DownloadIcon className="h-5 w-5" /></Button>
+                  <Button variant={"default"} onClick={handleExportExcel}>
+                    <DownloadIcon className="h-5 w-5" />
+                  </Button>
                 </CardTitle>
 
                 <CardDescription>
