@@ -1280,6 +1280,264 @@ const PunchOutDialog = ({
   );
 };
 
+// const EditAttendanceDialog = ({
+//   open,
+//   onOpenChange,
+//   record,
+//   onSuccess,
+// }: {
+//   open: boolean;
+//   onOpenChange: (open: boolean) => void;
+//   record: AttendanceRecord | null;
+//   onSuccess: () => void;
+// }) => {
+//   const { toast } = useToast();
+//   const [formData, setFormData] = useState({
+//     punch_in: "",
+//     punch_out: "",
+//     attendance_status: "Present",
+//     notes: "",
+//   });
+//   const [originalData, setOriginalData] = useState({
+//     punch_in: "",
+//     punch_out: "",
+//     attendance_status: "Present",
+//   });
+//   const [loading, setLoading] = useState(false);
+//   const tz = localStorage.getItem('selectedTimezone')??'UTC'
+
+//   useEffect(() => {
+//     if (record) {
+//       const formatForInput = (isoString: string | null) => {
+//         if (!isoString) return "";
+//         try {
+//           return DateTime.fromISO(isoString, { zone: "utc" }) // interpret stored value as UTC
+//             .setZone(localStorage.getItem("selectedTimezone") ?? "UTC") // convert to target timezone
+//             .toFormat("yyyy-MM-dd'T'HH:mm");
+//         } catch (error) {
+//           console.error("Error formatting date for input:", error);
+//           return "";
+//         }
+//       };
+
+//       const initialData = {
+//         punch_in: formatForInput(record.punch_in),
+//         punch_out: formatForInput(record.punch_out),
+//         attendance_status: record.attendance_status,
+//       };
+
+//       // Store both form data and original data for comparison
+//       setFormData({
+//         ...initialData,
+//         notes: "",
+//       });
+//       setOriginalData(initialData);
+//     }
+//   }, [record]);
+
+//   const handleTimeChange = (
+//     field: "punch_in" | "punch_out",
+//     timeValue: string
+//   ) => {
+//     setFormData((prev) => {
+//       // Get the date part from the existing datetime value
+//       const datePart =
+//         prev[field]?.split("T")[0] ||
+//         record?.attendance_date?.split("T")[0] ||
+//         "";
+//       // Combine with new time
+//       const newValue = datePart ? `${datePart}T${timeValue}` : timeValue;
+//       return { ...prev, [field]: newValue };
+//     });
+//   };
+
+//   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+//     const { id, value } = e.target;
+//     setFormData((prev) => ({ ...prev, [id]: value }));
+//   };
+
+//   const handleStatusChange = (value: string) => {
+//     setFormData((prev) => ({ ...prev, attendance_status: value }));
+//   };
+
+//   const handleSubmit = async (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!record) return;
+
+//     // Validate notes (required)
+//     if (!formData.notes.trim()) {
+//       toast({
+//         title: "Validation Error",
+//         description: "Please provide a reason for the change.",
+//         variant: "destructive",
+//       });
+//       return;
+//     }
+
+//     setLoading(true);
+
+//     try {
+//       // Build update payload with only changed fields
+//       const updatePayload: {
+//         timezone: string;
+//         attendance_status: string;
+//         punch_in?: string;
+//         punch_out?: string;
+//         update_reason: string;
+//       } = {
+//         // Always include timezone, attendance_status, and update_reason
+//         timezone: localStorage.getItem("selectedTimezone") ?? "UTC",
+//         attendance_status: formData.attendance_status,
+//         update_reason: formData.notes, // Required field
+//       };
+
+//       // Only include punch_in if it was changed
+//       if (formData.punch_in && formData.punch_in !== originalData.punch_in) {
+//         updatePayload.punch_in = formData.punch_in;
+//       }
+
+//       // Only include punch_out if it was changed
+//       if (formData.punch_out && formData.punch_out !== originalData.punch_out) {
+//         updatePayload.punch_out = formData.punch_out;
+//       }
+
+//       // console.log("Update payload:", updatePayload); // Debug log
+
+//       await updateAttendanceRecord(record.id, updatePayload);
+
+//       toast({
+//         title: "Success",
+//         description: "Attendance record updated successfully.",
+//       });
+//       onSuccess();
+//       onOpenChange(false);
+//     } catch (error: any) {
+//       toast({
+//         title: "Error",
+//         description: `Failed to update record: ${error.message}`,
+//         variant: "destructive",
+//       });
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+//   if (!record) return null;
+
+//   // Extract time from datetime for display
+//   const getTimeValue = (datetime: string) => {
+//     if (!datetime) return "";
+//     const timePart = datetime.split("T")[1];
+//     return timePart ? timePart.substring(0, 5) : ""; // Get HH:mm
+//   };
+
+//   return (
+//     <Dialog open={open} onOpenChange={onOpenChange}>
+//       <DialogContent>
+//         <DialogHeader>
+//           <DialogTitle>Edit Attendance Record</DialogTitle>
+//           <DialogDescription>
+//             Modify details for {record.first_name} {record.last_name} on{" "}
+//             {new Date(record.attendance_date).toLocaleDateString()}.
+//           </DialogDescription>
+//         </DialogHeader>
+//         <div className="space-y-2">
+//           <Label>Timezone</Label>
+//           <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground">
+//             <span className="truncate">{tz}</span>
+//             <button
+//               type="button"
+//               className="text-xs text-foreground/70 hover:text-foreground"
+//               onClick={() => {
+//                 // Display-only: keep as is. If needed, implement a picker here.
+//               }}
+//             >
+//               Current
+//             </button>
+//           </div>
+//         </div>
+//         <form onSubmit={handleSubmit} className="space-y-4 py-4">
+//           <div className="space-y-2">
+//             <Label htmlFor="attendance_status">Attendance Status</Label>
+//             <Select
+//               value={formData.attendance_status}
+//               onValueChange={handleStatusChange}
+//             >
+//               <SelectTrigger id="attendance_status">
+//                 <SelectValue placeholder="Select status" />
+//               </SelectTrigger>
+//               <SelectContent>
+//                 <SelectItem value="Present">Present</SelectItem>
+//                 <SelectItem value="Absent">Absent</SelectItem>
+//                 <SelectItem value="Leave">Leave</SelectItem>
+//               </SelectContent>
+//             </Select>
+//           </div>
+
+//           <div className="grid grid-cols-2 gap-4">
+//             <div className="space-y-2">
+//               <Label htmlFor="punch_in">Punch In</Label>
+//               <Input
+//                 disabled={formData.attendance_status !== "Present"}
+//                 id="punch_in"
+//                 type="time"
+//                 value={getTimeValue(formData.punch_in)}
+//                 onChange={(e) => handleTimeChange("punch_in", e.target.value)}
+//               />
+//             </div>
+//             <div className="space-y-2">
+//               <Label htmlFor="punch_out">Punch Out</Label>
+//               <Input
+//                 disabled={formData.attendance_status !== "Present"}
+//                 id="punch_out"
+//                 type="time"
+//                 value={getTimeValue(formData.punch_out)}
+//                 onChange={(e) => handleTimeChange("punch_out", e.target.value)}
+//               />
+//             </div>
+//           </div>
+
+//           <div className="space-y-2">
+//             <Label htmlFor="notes">
+//               Reason for Change (Notes) <span className="text-red-500">*</span>
+//             </Label>
+//             <Textarea
+//               id="notes"
+//               placeholder="e.g., Correcting manual entry error."
+//               value={formData.notes}
+//               onChange={handleChange}
+//               required
+//             />
+//           </div>
+
+//           <DialogFooter>
+//             <Button
+//               type="button"
+//               variant="outline"
+//               onClick={() => onOpenChange(false)}
+//               disabled={loading}
+//             >
+//               Cancel
+//             </Button>
+//             <Button type="submit" disabled={loading} aria-busy={loading}>
+//               {loading ? (
+//                 <>
+//                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+//                   Saving...
+//                 </>
+//               ) : (
+//                 "Save Changes"
+//               )}
+//             </Button>
+//           </DialogFooter>
+//         </form>
+//       </DialogContent>
+//     </Dialog>
+//   );
+// };
+
+// ============================= Page =============================
+
 const EditAttendanceDialog = ({
   open,
   onOpenChange,
@@ -1293,8 +1551,10 @@ const EditAttendanceDialog = ({
 }) => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
-    punch_in: "",
-    punch_out: "",
+    punch_in_date: "",
+    punch_in_time: "",
+    punch_out_date: "",
+    punch_out_time: "",
     attendance_status: "Present",
     notes: "",
   });
@@ -1304,52 +1564,47 @@ const EditAttendanceDialog = ({
     attendance_status: "Present",
   });
   const [loading, setLoading] = useState(false);
-  const tz = localStorage.getItem('selectedTimezone')??'UTC'
+  const tz = localStorage.getItem('selectedTimezone') ?? 'UTC';
 
   useEffect(() => {
     if (record) {
       const formatForInput = (isoString: string | null) => {
-        if (!isoString) return "";
+        if (!isoString) return { date: "", time: "" };
         try {
-          return DateTime.fromISO(isoString, { zone: "utc" }) // interpret stored value as UTC
-            .setZone(localStorage.getItem("selectedTimezone") ?? "UTC") // convert to target timezone
-            .toFormat("yyyy-MM-dd'T'HH:mm");
+          const dt = DateTime.fromISO(isoString, { zone: "utc" })
+            .setZone(localStorage.getItem("selectedTimezone") ?? "UTC");
+          return {
+            date: dt.toFormat("yyyy-MM-dd"),
+            time: dt.toFormat("HH:mm")
+          };
         } catch (error) {
           console.error("Error formatting date for input:", error);
-          return "";
+          return { date: "", time: "" };
         }
       };
 
-      const initialData = {
-        punch_in: formatForInput(record.punch_in),
-        punch_out: formatForInput(record.punch_out),
+      const punchIn = formatForInput(record.punch_in);
+      const punchOut = formatForInput(record.punch_out);
+
+      const initialFormData = {
+        punch_in_date: punchIn.date,
+        punch_in_time: punchIn.time,
+        punch_out_date: punchOut.date,
+        punch_out_time: punchOut.time,
         attendance_status: record.attendance_status,
+        notes: "",
       };
 
-      // Store both form data and original data for comparison
-      setFormData({
-        ...initialData,
-        notes: "",
+      // Store original data for comparison (as full datetime strings)
+      setOriginalData({
+        punch_in: record.punch_in || "",
+        punch_out: record.punch_out || "",
+        attendance_status: record.attendance_status,
       });
-      setOriginalData(initialData);
+
+      setFormData(initialFormData);
     }
   }, [record]);
-
-  const handleTimeChange = (
-    field: "punch_in" | "punch_out",
-    timeValue: string
-  ) => {
-    setFormData((prev) => {
-      // Get the date part from the existing datetime value
-      const datePart =
-        prev[field]?.split("T")[0] ||
-        record?.attendance_date?.split("T")[0] ||
-        "";
-      // Combine with new time
-      const newValue = datePart ? `${datePart}T${timeValue}` : timeValue;
-      return { ...prev, [field]: newValue };
-    });
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -1359,6 +1614,41 @@ const EditAttendanceDialog = ({
   const handleStatusChange = (value: string) => {
     setFormData((prev) => ({ ...prev, attendance_status: value }));
   };
+
+  const handleDateTimeChange = (
+    field: "punch_in_date" | "punch_in_time" | "punch_out_date" | "punch_out_time",
+    value: string
+  ) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Auto-calculate punch-out date for overnight shifts
+  useEffect(() => {
+    if (formData.punch_in_time && formData.punch_out_time && formData.punch_in_date) {
+      const [inHour, inMinute] = formData.punch_in_time.split(':').map(Number);
+      const [outHour, outMinute] = formData.punch_out_time.split(':').map(Number);
+      
+      const inMinutes = inHour * 60 + inMinute;
+      const outMinutes = outHour * 60 + outMinute;
+      
+      // If punch-out time is earlier than punch-in time, it's an overnight shift
+      if (inMinutes > outMinutes && formData.punch_in_date) {
+        // Auto-set punch-out date to next day
+        const nextDay = DateTime.fromISO(formData.punch_in_date)
+          .plus({ days: 1 })
+          .toFormat("yyyy-MM-dd");
+        
+        if (formData.punch_out_date !== nextDay) {
+          setFormData((prev) => ({ ...prev, punch_out_date: nextDay }));
+        }
+      } else if (inMinutes <= outMinutes && formData.punch_in_date) {
+        // Same day shift - set punch-out date same as punch-in date
+        if (formData.punch_out_date !== formData.punch_in_date) {
+          setFormData((prev) => ({ ...prev, punch_out_date: formData.punch_in_date }));
+        }
+      }
+    }
+  }, [formData.punch_in_time, formData.punch_out_time, formData.punch_in_date]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1377,7 +1667,16 @@ const EditAttendanceDialog = ({
     setLoading(true);
 
     try {
-      // Build update payload with only changed fields
+      // Build full datetime strings from separate date and time fields
+      const currentPunchIn = formData.punch_in_date && formData.punch_in_time
+        ? `${formData.punch_in_date}T${formData.punch_in_time}`
+        : "";
+      
+      const currentPunchOut = formData.punch_out_date && formData.punch_out_time
+        ? `${formData.punch_out_date}T${formData.punch_out_time}`
+        : "";
+
+      // Build update payload
       const updatePayload: {
         timezone: string;
         attendance_status: string;
@@ -1385,23 +1684,20 @@ const EditAttendanceDialog = ({
         punch_out?: string;
         update_reason: string;
       } = {
-        // Always include timezone, attendance_status, and update_reason
         timezone: localStorage.getItem("selectedTimezone") ?? "UTC",
         attendance_status: formData.attendance_status,
-        update_reason: formData.notes, // Required field
+        update_reason: formData.notes,
       };
 
       // Only include punch_in if it was changed
-      if (formData.punch_in && formData.punch_in !== originalData.punch_in) {
-        updatePayload.punch_in = formData.punch_in;
+      if (currentPunchIn && currentPunchIn !== originalData.punch_in) {
+        updatePayload.punch_in = currentPunchIn;
       }
 
       // Only include punch_out if it was changed
-      if (formData.punch_out && formData.punch_out !== originalData.punch_out) {
-        updatePayload.punch_out = formData.punch_out;
+      if (currentPunchOut && currentPunchOut !== originalData.punch_out) {
+        updatePayload.punch_out = currentPunchOut;
       }
-
-      // console.log("Update payload:", updatePayload); // Debug log
 
       await updateAttendanceRecord(record.id, updatePayload);
 
@@ -1424,13 +1720,6 @@ const EditAttendanceDialog = ({
 
   if (!record) return null;
 
-  // Extract time from datetime for display
-  const getTimeValue = (datetime: string) => {
-    if (!datetime) return "";
-    const timePart = datetime.split("T")[1];
-    return timePart ? timePart.substring(0, 5) : ""; // Get HH:mm
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -1448,9 +1737,7 @@ const EditAttendanceDialog = ({
             <button
               type="button"
               className="text-xs text-foreground/70 hover:text-foreground"
-              onClick={() => {
-                // Display-only: keep as is. If needed, implement a picker here.
-              }}
+              onClick={() => {}}
             >
               Current
             </button>
@@ -1474,28 +1761,65 @@ const EditAttendanceDialog = ({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="punch_in">Punch In</Label>
-              <Input
-                disabled={formData.attendance_status !== "Present"}
-                id="punch_in"
-                type="time"
-                value={getTimeValue(formData.punch_in)}
-                onChange={(e) => handleTimeChange("punch_in", e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="punch_out">Punch Out</Label>
-              <Input
-                disabled={formData.attendance_status !== "Present"}
-                id="punch_out"
-                type="time"
-                value={getTimeValue(formData.punch_out)}
-                onChange={(e) => handleTimeChange("punch_out", e.target.value)}
-              />
-            </div>
-          </div>
+          {formData.attendance_status === "Present" && (
+            <>
+              <div className="space-y-2">
+                <Label>Punch In</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="punch_in_date" className="text-xs text-muted-foreground">
+                      Date
+                    </Label>
+                    <Input
+                      id="punch_in_date"
+                      type="date"
+                      value={formData.punch_in_date}
+                      onChange={(e) => handleDateTimeChange("punch_in_date", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="punch_in_time" className="text-xs text-muted-foreground">
+                      Time
+                    </Label>
+                    <Input
+                      id="punch_in_time"
+                      type="time"
+                      value={formData.punch_in_time}
+                      onChange={(e) => handleDateTimeChange("punch_in_time", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Punch Out</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="punch_out_date" className="text-xs text-muted-foreground">
+                      Date
+                    </Label>
+                    <Input
+                      id="punch_out_date"
+                      type="date"
+                      value={formData.punch_out_date}
+                      onChange={(e) => handleDateTimeChange("punch_out_date", e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="punch_out_time" className="text-xs text-muted-foreground">
+                      Time
+                    </Label>
+                    <Input
+                      id="punch_out_time"
+                      type="time"
+                      value={formData.punch_out_time}
+                      onChange={(e) => handleDateTimeChange("punch_out_time", e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="notes">
@@ -1536,7 +1860,7 @@ const EditAttendanceDialog = ({
   );
 };
 
-// ============================= Page =============================
+
 export default function AttendanceRecordsPage() {
   const { hasPermission } = useAuth();
   const { toast } = useToast();

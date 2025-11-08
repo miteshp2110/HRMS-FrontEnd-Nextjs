@@ -19,6 +19,7 @@
 // import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 // import { Switch } from "@/components/ui/switch"
 // import { UserPlus, Image as ImageIcon } from "lucide-react"
+// import { SearchableSelect } from "@/components/ui/searchable-select"
 // import {
 //   createUser,
 //   getRoles,
@@ -49,6 +50,12 @@
 //   const [jobs, setJobs] = React.useState<Job[]>([])
 //   const [shifts, setShifts] = React.useState<Shift[]>([])
 //   const [managers, setManagers] = React.useState<UserProfile[]>([])
+
+//   // Selected values for searchable selects
+//   const [selectedRole, setSelectedRole] = React.useState<string>("")
+//   const [selectedJob, setSelectedJob] = React.useState<string>("")
+//   const [selectedShift, setSelectedShift] = React.useState<string>("")
+//   const [selectedManager, setSelectedManager] = React.useState<string>("")
 
 //   React.useEffect(() => {
 //     if (open) {
@@ -103,14 +110,18 @@
 //       "password",
 //       "nationality",
 //       "joiningDate",
-//       "jobRole",
-//       "reportsTo",
 //     ]
 
 //     requiredFields.forEach((field) => {
 //       const value = formData.get(field) as string
 //       if (!value?.trim()) errors[field] = true
 //     })
+
+//     // Validate searchable selects
+//     if (!selectedRole) errors["systemRole"] = true
+//     if (!selectedJob) errors["jobRole"] = true
+//     if (!selectedShift) errors["shift"] = true
+//     if (!selectedManager) errors["reportsTo"] = true
 
 //     if (isProbation) {
 //       const period = formData.get("probationPeriod") as string
@@ -125,6 +136,12 @@
 //     e.preventDefault()
 //     const formData = new FormData(e.currentTarget)
 //     formData.set("isProbation", String(isProbation))
+    
+//     // Add selected values from searchable selects
+//     formData.set("systemRole", selectedRole)
+//     formData.set("jobRole", selectedJob)
+//     formData.set("shift", selectedShift)
+//     formData.set("reportsTo", selectedManager)
 
 //     if (!validateForm(formData)) {
 //       toast({
@@ -147,6 +164,10 @@
 //       setPreviewImage(null)
 //       setProbation(true)
 //       setValidationErrors({})
+//       setSelectedRole("")
+//       setSelectedJob("")
+//       setSelectedShift("")
+//       setSelectedManager("")
 //     } catch (err: any) {
 //       toast({
 //         title: "Error",
@@ -164,6 +185,10 @@
 //       setValidationErrors({})
 //       setPreviewImage(null)
 //       setProbation(true)
+//       setSelectedRole("")
+//       setSelectedJob("")
+//       setSelectedShift("")
+//       setSelectedManager("")
 //     }
 //   }
 
@@ -286,10 +311,10 @@
 //             </div>
 
 //             {/* Probation Section */}
-//             <div className="p-4 border rounded-md bg-gray-50 space-y-4">
+//             <div className="p-4 border rounded-md bg-muted/30 space-y-4">
 //               <div className="flex items-center space-x-2">
 //                 <Switch id="isProbation" checked={isProbation} onCheckedChange={setProbation} />
-//                 <Label htmlFor="isProbation" className="font-medium">
+//                 <Label htmlFor="isProbation" className="font-medium text-foreground">
 //                   Employee is on Probation
 //                 </Label>
 //               </div>
@@ -313,74 +338,66 @@
 //               )}
 //             </div>
 
-//             {/* Roles & Reporting */}
+//             {/* Roles & Reporting with Searchable Selects */}
 //             <div className="grid grid-cols-2 gap-4">
 //               <div className="space-y-2">
-//                 <Label htmlFor="systemRole">System Role *</Label>
-//                 <Select name="systemRole" required>
-//                   <SelectTrigger>
-//                     <SelectValue placeholder="Select role" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     {roles.map((role) => (
-//                       <SelectItem key={role.id} value={String(role.id)}>
-//                         {role.name}
-//                       </SelectItem>
-//                     ))}
-//                   </SelectContent>
-//                 </Select>
+//                 <Label className={validationErrors.systemRole ? "text-red-500" : ""}>
+//                   System Role *
+//                 </Label>
+//                 <SearchableSelect
+//                   options={roles}
+//                   value={selectedRole}
+//                   onValueChange={setSelectedRole}
+//                   placeholder="Select role"
+//                   searchPlaceholder="Search roles..."
+//                   emptyMessage="No roles found."
+//                   className={errorClass("systemRole")}
+//                 />
 //               </div>
 //               <div className="space-y-2">
-//                 <Label htmlFor="jobRole" className={validationErrors.jobRole ? "text-red-500" : ""}>
+//                 <Label className={validationErrors.jobRole ? "text-red-500" : ""}>
 //                   Job Title *
 //                 </Label>
-//                 <Select name="jobRole">
-//                   <SelectTrigger className={errorClass("jobRole")}>
-//                     <SelectValue placeholder="Select job title" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     {jobs.map((job) => (
-//                       <SelectItem key={job.id} value={String(job.id)}>
-//                         {job.title}
-//                       </SelectItem>
-//                     ))}
-//                   </SelectContent>
-//                 </Select>
+//                 <SearchableSelect
+//                   options={jobs}
+//                   value={selectedJob}
+//                   onValueChange={setSelectedJob}
+//                   placeholder="Select job title"
+//                   searchPlaceholder="Search job titles..."
+//                   emptyMessage="No job titles found."
+//                   className={errorClass("jobRole")}
+//                 />
 //               </div>
 //             </div>
 
 //             <div className="grid grid-cols-2 gap-4">
 //               <div className="space-y-2">
-//                 <Label htmlFor="shift">Shift *</Label>
-//                 <Select name="shift" required>
-//                   <SelectTrigger>
-//                     <SelectValue placeholder="Select shift" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     {shifts.map((shift) => (
-//                       <SelectItem key={shift.id} value={String(shift.id)}>
-//                         {shift.name}
-//                       </SelectItem>
-//                     ))}
-//                   </SelectContent>
-//                 </Select>
+//                 <Label className={validationErrors.shift ? "text-red-500" : ""}>
+//                   Shift *
+//                 </Label>
+//                 <SearchableSelect
+//                   options={shifts}
+//                   value={selectedShift}
+//                   onValueChange={setSelectedShift}
+//                   placeholder="Select shift"
+//                   searchPlaceholder="Search shifts..."
+//                   emptyMessage="No shifts found."
+//                   className={errorClass("shift")}
+//                 />
 //               </div>
 //               <div className="space-y-2">
-//                 <Label htmlFor="reportsTo" className={validationErrors.reportsTo ? "text-red-500" : ""}>
+//                 <Label className={validationErrors.reportsTo ? "text-red-500" : ""}>
 //                   Reports To *
 //                 </Label>
-//                 <Select name="reportsTo">
-//                   <SelectTrigger className={errorClass("reportsTo")}>
-//                     <SelectValue placeholder="Select manager" />
-//                   </SelectTrigger>
-//                   <SelectContent>
-//                     {managers.map((manager) => (
-//                       <SelectItem key={manager.id} value={String(manager.id)}>
-//                         {manager.first_name} {manager.last_name}
-//                       </SelectItem>
-//                     ))}
-//                   </SelectContent>
-//                 </Select>
+//                 <SearchableSelect
+//                   options={managers}
+//                   value={selectedManager}
+//                   onValueChange={setSelectedManager}
+//                   placeholder="Select manager"
+//                   searchPlaceholder="Search managers..."
+//                   emptyMessage="No managers found."
+//                   className={errorClass("reportsTo")}
+//                 />
 //               </div>
 //             </div>
 
@@ -416,6 +433,7 @@
 // }
 
 
+
 "use client"
 
 import * as React from "react"
@@ -434,7 +452,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Switch } from "@/components/ui/switch"
-import { UserPlus, Image as ImageIcon } from "lucide-react"
+import { UserPlus, Image as ImageIcon, Eye, EyeOff } from "lucide-react"
 import { SearchableSelect } from "@/components/ui/searchable-select"
 import {
   createUser,
@@ -459,6 +477,7 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
   const [previewImage, setPreviewImage] = React.useState<string | null>(null)
   const [isProbation, setProbation] = React.useState<boolean>(true)
   const [validationErrors, setValidationErrors] = React.useState<Record<string, boolean>>({})
+  const [showPassword, setShowPassword] = React.useState(false)
   const { toast } = useToast()
 
   // Dropdown data state
@@ -472,6 +491,13 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
   const [selectedJob, setSelectedJob] = React.useState<string>("")
   const [selectedShift, setSelectedShift] = React.useState<string>("")
   const [selectedManager, setSelectedManager] = React.useState<string>("")
+
+  // Form field values for auto-population
+  const [firstName, setFirstName] = React.useState("")
+  const [lastName, setLastName] = React.useState("")
+  const [employeeId, setEmployeeId] = React.useState("")
+  const [email, setEmail] = React.useState("")
+  const [password, setPassword] = React.useState("password")
 
   React.useEffect(() => {
     if (open) {
@@ -496,6 +522,14 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
         })
     }
   }, [open, toast])
+
+  // Auto-populate email based on firstName, lastName, and employeeId
+  React.useEffect(() => {
+    if (firstName && lastName && employeeId) {
+      const autoEmail = `${firstName.toLowerCase()}${lastName.toLowerCase()}${employeeId}@org.com`
+      setEmail(autoEmail)
+    }
+  }, [firstName, lastName, employeeId])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -559,6 +593,13 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
     formData.set("shift", selectedShift)
     formData.set("reportsTo", selectedManager)
 
+    // Handle dob - pass null if not entered
+    const dobValue = formData.get("dob") as string
+    if (!dobValue || dobValue.trim() === "") {
+      formData.delete("dob")
+      formData.set("dob", "null")
+    }
+
     if (!validateForm(formData)) {
       toast({
         title: "Validation Error",
@@ -577,13 +618,7 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
       })
       onUserCreated()
       setOpen(false)
-      setPreviewImage(null)
-      setProbation(true)
-      setValidationErrors({})
-      setSelectedRole("")
-      setSelectedJob("")
-      setSelectedShift("")
-      setSelectedManager("")
+      resetForm()
     } catch (err: any) {
       toast({
         title: "Error",
@@ -595,16 +630,26 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
     }
   }
 
+  const resetForm = () => {
+    setPreviewImage(null)
+    setProbation(true)
+    setValidationErrors({})
+    setSelectedRole("")
+    setSelectedJob("")
+    setSelectedShift("")
+    setSelectedManager("")
+    setFirstName("")
+    setLastName("")
+    setEmployeeId("")
+    setEmail("")
+    setPassword("password")
+    setShowPassword(false)
+  }
+
   const handleDialogOpenChange = (value: boolean) => {
     setOpen(value)
     if (!value) {
-      setValidationErrors({})
-      setPreviewImage(null)
-      setProbation(true)
-      setSelectedRole("")
-      setSelectedJob("")
-      setSelectedShift("")
-      setSelectedManager("")
+      resetForm()
     }
   }
 
@@ -655,13 +700,25 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
                 <Label htmlFor="firstName" className={validationErrors.firstName ? "text-red-500" : ""}>
                   First Name *
                 </Label>
-                <Input id="firstName" name="firstName" className={errorClass("firstName")} />
+                <Input 
+                  id="firstName" 
+                  name="firstName" 
+                  className={errorClass("firstName")} 
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName" className={validationErrors.lastName ? "text-red-500" : ""}>
                   Last Name *
                 </Label>
-                <Input id="lastName" name="lastName" className={errorClass("lastName")} />
+                <Input 
+                  id="lastName" 
+                  name="lastName" 
+                  className={errorClass("lastName")} 
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
               </div>
             </div>
 
@@ -669,7 +726,14 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
               <Label htmlFor="id" className={validationErrors.id ? "text-red-500" : ""}>
                 Employee ID *
               </Label>
-              <Input id="id" name="id" type="number" className={errorClass("id")} />
+              <Input 
+                id="id" 
+                name="id" 
+                type="number" 
+                className={errorClass("id")} 
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+              />
             </div>
 
             {/* Contact & Security */}
@@ -677,7 +741,17 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
               <Label htmlFor="email" className={validationErrors.email ? "text-red-500" : ""}>
                 Email *
               </Label>
-              <Input id="email" name="email" type="email" className={errorClass("email")} />
+              <Input 
+                id="email" 
+                name="email" 
+                type="email" 
+                className={errorClass("email")} 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-generated as: firstname+lastname+id@org.com
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone" className={validationErrors.phone ? "text-red-500" : ""}>
@@ -689,7 +763,32 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
               <Label htmlFor="password" className={validationErrors.password ? "text-red-500" : ""}>
                 Password *
               </Label>
-              <Input id="password" name="password" type="password" className={errorClass("password")} />
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  name="password" 
+                  type={showPassword ? "text" : "password"} 
+                  className={errorClass("password")} 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Default password is "password". You can change it by typing a new one.
+              </p>
             </div>
 
             {/* Demographics */}
@@ -716,6 +815,9 @@ export function CreateUserDialog({ onUserCreated }: CreateUserDialogProps) {
             <div className="space-y-2">
               <Label htmlFor="dob">Date of Birth</Label>
               <Input id="dob" name="dob" type="date" />
+              <p className="text-xs text-muted-foreground">
+                Leave empty if not available (will be stored as null)
+              </p>
             </div>
 
             {/* Joining Date */}
