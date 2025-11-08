@@ -220,7 +220,7 @@ export function SettingsPage() {
               </TabsList>
 
               {/* Timezone Settings */}
-              {hasPermission("roles.manage") && (
+              {(
                 <TabsContent value="timezone" className="mt-6">
                   <Card>
                     <CardHeader>
